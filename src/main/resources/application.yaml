@@ -1,0 +1,31 @@
+server:
+  port: 8080
+  servlet:
+    contextPath: /photo-album-service
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id:
+              secret:
+  servlet:
+    multipart:
+      max-file-size: -1
+      max-request-size: -1
+  datasource:
+    url: jdbc:mysql://localhost:3306/database?zeroDateTimeBehavior=convertToNull
+    username: user
+    password: password
+    driver-class-name: com.mysql.jdbc.Driver
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+image-directory: /opt/images
