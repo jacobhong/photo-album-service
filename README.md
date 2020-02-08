@@ -13,3 +13,8 @@ update import.mysql to modify database schema when creating. Only run once, dele
 
 in ```application.yml``` change directory for images to be saved, if want to use default /opt than must grant permission to write to directory
 
+
+docker build -t photo-album-service .
+docker tag photo-album-service:latest 500536527570.dkr.ecr.us-west-1.amazonaws.com/photo-album-service:latest
+docker push 500536527570.dkr.ecr.us-west-1.amazonaws.com/photo-album-service:latest
+ec2-13-57-205-189.us-west-1.compute.amazonaws.com
