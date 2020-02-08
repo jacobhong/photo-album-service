@@ -1,5 +1,6 @@
 package com.webapp.starter.service;
 
+import com.nimbusds.jose.proc.SecurityContext;
 import com.webapp.starter.domain.Photo;
 import com.webapp.starter.repository.AlbumRepository;
 import com.webapp.starter.repository.PhotoRepository;
@@ -11,6 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
+import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -39,6 +43,7 @@ public class PhotoService {
   @Autowired
   private AlbumRepository albumRepository;
 
+
   public Optional<Photo> getPhotoById(Integer photoId, Boolean setSrcImage) {
     final var photo = photoRepository.findById(photoId);
     if (setSrcImage == true) {
@@ -48,6 +53,7 @@ public class PhotoService {
   }
 
   public List<Photo> getPhotosByQueryParams(Map<String, String> params) {
+    logger.info("getting photo for googleId {}", SecurityContextHolder.getContext().getAuthentication().getName());
     final var response = new ArrayList<Photo>();
     final var photos = new ArrayList<Photo>();
 
@@ -56,7 +62,7 @@ public class PhotoService {
         .getPhotosByAlbumId(Integer.valueOf(params.get("albumId")))
         .ifPresent(photo -> photos.addAll(photo));
     } else {
-      photos.addAll(photoRepository.findAll());
+      photos.addAll(photoRepository.getPhotosByGoogleId(SecurityContextHolder.getContext().getAuthentication().getName()));
     }
 
     photos.forEach(p -> {
@@ -74,6 +80,7 @@ public class PhotoService {
 
   @Transactional
   public Photo savePhoto(MultipartFile file) throws IOException {
+    logger.info("saving photo for googleId {}", SecurityContextHolder.getContext().getAuthentication().getName());
     final var fileName = file
                            .getOriginalFilename()
                            .substring(0, file.getOriginalFilename().lastIndexOf(".")) + ".jpg";
@@ -83,7 +90,7 @@ public class PhotoService {
 
     final var compressedImage = this.compressAndSavePhoto(file, filePath);
     this.saveThumbnail(compressedImage);
-    return photoRepository.save(Photo.newInstance(file, filePath, thumbnailFilePath, contentType));
+    return photoRepository.save(Photo.newInstance(file, filePath, thumbnailFilePath, contentType, SecurityContextHolder.getContext().getAuthentication().getName()));
   }
 
   @Transactional

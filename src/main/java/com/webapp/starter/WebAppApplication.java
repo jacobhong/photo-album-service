@@ -7,10 +7,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 
 @SpringBootApplication
 @ComponentScan(basePackages = "com.webapp.starter")
-//@EnableAuthorizationServer
-@EnableWebSecurity(debug = false)
-//@EnableOAuth2Client
-//@EnableAuthorizationServer
+@EnableWebSecurity(debug = true)
 public class WebAppApplication {
 
 	public static void main(String[] args) {

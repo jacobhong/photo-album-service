@@ -27,7 +27,11 @@ public class Album implements Serializable {
   private Set<Integer> photoIds = new HashSet<>();
   private String title;
   private String description;
+
+  @Column(name = "google_id")
+  private String googleId;
   private Date created;
+
   private Date updated;
 
   public Integer getId() {
@@ -76,6 +80,14 @@ public class Album implements Serializable {
 
   public void setPhotoIds(Set<Integer> photoIds) {
     this.photoIds = photoIds;
+  }
+
+  public String getGoogleId() {
+    return googleId;
+  }
+
+  public void setGoogleId(String googleId) {
+    this.googleId = googleId;
   }
 
   @Override

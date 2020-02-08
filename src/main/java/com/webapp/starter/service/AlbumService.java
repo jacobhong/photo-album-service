@@ -6,6 +6,7 @@ import com.webapp.starter.repository.PhotoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -26,11 +27,12 @@ public class AlbumService {
 //  }
 
   public List<Album> getAlbums() {
-    return albumRepository.findAll();
+    return albumRepository.getAlbumByGoogleId(SecurityContextHolder.getContext().getAuthentication().getName());
   }
 
   @Transactional
   public Album saveAlbum(Album album) {
+    album.setGoogleId(SecurityContextHolder.getContext().getAuthentication().getName());
     final var savedAlbum = this.albumRepository.save(album);
 
     album.getPhotoIds().forEach(id -> {

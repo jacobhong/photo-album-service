@@ -29,6 +29,8 @@ public class Photo implements Serializable {
   private String base64SrcPhoto;
   @Transient
   private String base64ThumbnailPhoto;
+  @Column(name = "google_id")
+  private String googleId;
   private String contentType;
   private Date created;
   private Date updated;
@@ -113,12 +115,21 @@ public class Photo implements Serializable {
     this.contentType = contentType;
   }
 
-  public static Photo newInstance(MultipartFile file, String filePath, String thumbnailFilePath, String contentType) {
+  public String getGoogleId() {
+    return googleId;
+  }
+
+  public void setGoogleId(String googleId) {
+    this.googleId = googleId;
+  }
+
+  public static Photo newInstance(MultipartFile file, String filePath, String thumbnailFilePath, String contentType, String googleId) {
     final var photo = new Photo();
     photo.setContentType(contentType);
     photo.setFilePath(filePath);
     photo.setThumbnailFilePath(thumbnailFilePath);
     photo.setTitle(file.getOriginalFilename());
+    photo.setGoogleId(googleId);
     return photo;
   }
 

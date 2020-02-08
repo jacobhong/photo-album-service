@@ -2,14 +2,13 @@ package com.webapp.starter.config;
 
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.proc.JWSAlgorithmFamilyJWSKeySelector;
-import com.nimbusds.jose.proc.JWSKeySelector;
-import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
+import com.webapp.starter.service.GoogleUserRegistration;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -28,7 +27,11 @@ import java.util.stream.Collectors;
 @Configuration
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
   @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
-  String jwkSetUri;
+
+  private String jwkSetUri;
+
+  @Autowired
+  private GoogleUserRegistration googleUserRegistration;
 
   @Override
   protected void configure(HttpSecurity http) throws Exception {
@@ -36,9 +39,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
       .authorizeRequests(authorizeRequests ->
                            authorizeRequests
                              .antMatchers("/actuator/*").permitAll()
-                             .antMatchers( "/photos/**").hasAuthority("kooriim-fe")
-                             .antMatchers( "/albums/**").hasAuthority("kooriim-fe")
-                             .antMatchers( "/users/**").hasAuthority("kooriim-fe")
+                             .antMatchers("/photos/**").hasAuthority("kooriim-fe")
+                             .antMatchers("/albums/**").hasAuthority("kooriim-fe")
+                             .antMatchers("/users/**").hasAuthority("kooriim-fe")
                              .anyRequest().authenticated()
       )
       .oauth2ResourceServer()
@@ -49,10 +52,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
   @Bean
   public JwtDecoder jwtDecoder() throws MalformedURLException, KeySourceException {
-    JWSKeySelector<SecurityContext> jwsKeySelector =
+    final var jwsKeySelector =
       JWSAlgorithmFamilyJWSKeySelector.fromJWKSetURL(new URL(this.jwkSetUri));
 
-    DefaultJWTProcessor<SecurityContext> jwtProcessor =
+    final var jwtProcessor =
       new DefaultJWTProcessor<>();
     jwtProcessor.setJWSKeySelector(jwsKeySelector);
 
@@ -60,20 +63,22 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
   }
 
-  Converter<Jwt, AbstractAuthenticationToken> grantedAuthoritiesExtractor() {
+  public Converter<Jwt, AbstractAuthenticationToken> grantedAuthoritiesExtractor() {
     final var jwtAuthenticationConverter = new JwtAuthenticationConverter();
     jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter
                                  (new GrantedAuthoritiesExtractor());
     return jwtAuthenticationConverter;
   }
 
-  static class GrantedAuthoritiesExtractor
+  public class GrantedAuthoritiesExtractor
     implements Converter<Jwt, Collection<GrantedAuthority>> {
 
     public Collection<GrantedAuthority> convert(Jwt jwt) {
-      Collection<String> authorities = (Collection<String>)
-                                         jwt.getClaims().get("grants");
-
+      final var authorities = (Collection<String>)
+                                jwt.getClaims().get("grants");
+      if (authorities.size() > 0) {
+        googleUserRegistration.saveUserIfNotExist(jwt.getClaims());
+      }
       return authorities.stream()
                .map(SimpleGrantedAuthority::new)
                .collect(Collectors.toList());
