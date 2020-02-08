@@ -3,7 +3,7 @@ services:
   photo-album-service:
     image: 500536527570.dkr.ecr.us-west-1.amazonaws.com/kooriim:latest
     env_file:
-      - /docker/photo-album-service.env
+      - ./docker/photo-album-service.env
     ports:
       - "8080:8080"
   mariadb:
