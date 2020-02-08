@@ -4,9 +4,6 @@ services:
     image: 500536527570.dkr.ecr.us-west-1.amazonaws.com/photo-album-service:latest
     env_file:
       - ./docker/photo-album-service.env
-    depends_on:
-      - mariadb
-      - keycloak
     ports:
       - "8080:8080"
     networks:
@@ -43,8 +40,6 @@ services:
       - "8081:8080"
     networks:
       - auth-network
-    depends_on:
-      - mariadb
 networks:
   auth-network:
     driver: bridge
