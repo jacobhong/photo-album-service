@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,6 +25,7 @@ public class PhotoController {
   @Autowired
   private PhotoService photoService;
 
+//  @PreAuthorize("hasAuthority('kooriim-fe")
   @RequestMapping(value = "")
   public ResponseEntity<List<Photo>> getPhotos(@RequestParam Map<String, String> params) {
     logger.info("getting all photos with queryParams: {}", params);
