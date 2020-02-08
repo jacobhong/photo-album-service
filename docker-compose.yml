@@ -9,6 +9,8 @@ services:
       - keycloak
     ports:
       - "8080:8080"
+    networks:
+      - auth-network
   mariadb:
     image: mariadb
     restart: always
