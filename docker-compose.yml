@@ -35,9 +35,13 @@ services:
       DB_USER: keycloak
       DB_VENDOR: mariadb
       DB_SCHEMA: keycloak
-      KEYCLOAK_LOGLEVEL: debug
+      KEYCLOAK_LOGLEVEL: DEBUG
+    volumes:
+      - ./docker/keystore:/etc/x509/https
     ports:
       - "8081:8080"
+      - "8443:8443"
+    container_name: keycloak.kooriim.com
     networks:
       - auth-network
 networks:
