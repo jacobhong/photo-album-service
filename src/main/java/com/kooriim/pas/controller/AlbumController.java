@@ -16,9 +16,16 @@ import java.util.Set;
 @RequestMapping("/albums")
 public class AlbumController {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
+  @Autowired
+  private AlbumRepository albumRepository;
   @Autowired
   private AlbumService albumService;
+
+  @RequestMapping(value = "/{id}", method = RequestMethod.GET, consumes = "application/json")
+  public ResponseEntity<Set<Album>> getAlbumById(@PathVariable(name = "id") Integer id) {
+    logger.info("GETTING ALBUM");
+    return new ResponseEntity(albumRepository.findById(id), HttpStatus.OK);
+  }
 
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ResponseEntity<Set<Album>> getAlbums() {
