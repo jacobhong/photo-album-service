@@ -37,3 +37,19 @@ import existing crt into existing keystore
 openssl pkcs12 -export -name keycloak -in tls.crt -inkey tls.key -out keystore.p12
 ```
 
+configure keycloak with realm + role + client + google identity provider
+
+```$xslt
+authenticate @ localhost:8443/auth keycloak::password
+```
+
+```$xslt
+create new realm : kooriim-fe
+create new client : kooriim-fe
+create new identity provider: google
+-add new mapper of type Hardcoded Role: select koorim-fe
+create new role: kooriim-fe
+-in roles - default roles - add koorim-fe
+```
+
+

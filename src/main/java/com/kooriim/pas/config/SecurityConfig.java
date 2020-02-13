@@ -78,6 +78,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     public Collection<GrantedAuthority> convert(Jwt jwt) {
       final var authorities = (Collection<String>)
                                 jwt.getClaims().get("grants");
+      System.out.println(authorities.size() + " SIZE OF AIUTH");
       if (authorities.size() > 0) {
         // TODO move this somewhere else
         googleUserRegistration.saveUserIfNotExist(jwt.getClaims());

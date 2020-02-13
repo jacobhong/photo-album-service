@@ -6,7 +6,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 
 @SpringBootApplication
-@ComponentScan(basePackages = "com.webapp.starter")
+@ComponentScan(basePackages = "com.kooriim.pas")
 @EnableWebSecurity(debug = true)
 public class WebAppApplication {
 
