@@ -1,6 +1,6 @@
 CREATE USER 'keycloak'@'%' IDENTIFIED BY 'password';
 CREATE DATABASE keycloak CHARACTER SET utf8 COLLATE utf8_unicode_ci;
-GRANT ALL PRIVILEGES ON keycloak.* TO 'keycloak'@'%';
+GRANT ALL PRIVILEGES ON keycloak131.* TO 'keycloak'@'%';
 
 DROP TABLE IF EXISTS users;
 CREATE TABLE  users (
