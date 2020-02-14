@@ -23,7 +23,7 @@ public class AlbumService {
   private PhotoRepository photoRepository;
 
   public List<Album> getAlbums() {
-    return albumRepository.getAlbumByGoogleId(SecurityContextHolder.getContext().getAuthentication().getName());
+    return albumRepository.findByGoogleId(SecurityContextHolder.getContext().getAuthentication().getName());
   }
 
   @Transactional

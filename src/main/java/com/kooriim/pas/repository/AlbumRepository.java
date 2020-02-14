@@ -14,5 +14,5 @@ public interface AlbumRepository extends JpaRepository<Album, Integer> {
   @Query(value = "INSERT INTO photo_album(album_id, photo_id) VALUES(?1, ?2)", nativeQuery = true)
   void savePhotoAlbum(Integer albumId, Integer photoId);
 
-  List<Album> getAlbumByGoogleId(String googleId);
+  List<Album> findByGoogleId(String googleId);
 }

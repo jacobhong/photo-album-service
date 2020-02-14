@@ -1,0 +1,51 @@
+server:
+  port: 8080
+  servlet:
+    contextPath: /photo-album-service
+#  ssl:
+#    enabled: false
+#    key-alias: keycloak
+#    key-store: classpath:keystore.p12
+#    key-store-password: "password"
+#    key-store-type: PKCS12
+spring:
+  security:
+#    user:
+#      name: user
+#      password: password
+#      roles: ACTUATOR
+    oauth2:
+      resourceserver:
+        jwt:
+          introspection-uri: http://localhost:8081/auth/realms/kooriim-fe/protocol/openid-connect/token/introspect
+          issuer-uri: http://localhost:8081/auth/realms/kooriim-fe
+          jwk-set-uri: http://localhost:8081/auth/realms/kooriim-fe/protocol/openid-connect/certs
+  servlet:
+    multipart:
+      max-file-size: -1
+      max-request-size: -1
+  datasource:
+    url: jdbc:mysql://localhost:3306/database?zeroDateTimeBehavior=convertToNull
+    username: user
+    password: password
+    driver-class-name: com.mysql.jdbc.Driver
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+image-directory: /opt/images
+keycloak:
+  realm: kooriim-fe
+  resource: kooriim-fe
+  auth-server-url: http://192.168.1.206.xip.io:8081/auth
+  public-client: true
+  principal-attribute: preferred_username
+management:
+  security:
+    enabled: false

@@ -21,11 +21,11 @@ public class AlbumController {
   @Autowired
   private AlbumService albumService;
 
-  @RequestMapping(value = "/{id}", method = RequestMethod.GET, consumes = "application/json")
-  public ResponseEntity<Set<Album>> getAlbumById(@PathVariable(name = "id") Integer id) {
-    logger.info("GETTING ALBUM");
-    return new ResponseEntity(albumRepository.findById(id), HttpStatus.OK);
-  }
+//  @RequestMapping(value = "/{id}", method = RequestMethod.GET, consumes = "application/json")
+//  public ResponseEntity<Set<Album>> getAlbumById(@PathVariable(name = "id") Integer id) {
+//    logger.info("GETTING ALBUM");
+//    return new ResponseEntity(albumRepository.findById(id), HttpStatus.OK);
+//  }
 
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ResponseEntity<Set<Album>> getAlbums() {
