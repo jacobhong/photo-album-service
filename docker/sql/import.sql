@@ -1,5 +1,3 @@
-CREATE USER 'user131'@'%' IDENTIFIED BY 'password131';
-GRANT ALL PRIVILEGES ON user131.* TO 'pas'@'%';
 CREATE USER 'keycloak131'@'%' IDENTIFIED BY 'password131';
 CREATE DATABASE keycloak CHARACTER SET utf8 COLLATE utf8_unicode_ci;
 GRANT ALL PRIVILEGES ON keycloak131.* TO 'keycloak'@'%';
