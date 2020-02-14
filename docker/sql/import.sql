@@ -2,6 +2,9 @@ CREATE USER 'keycloak131'@'%' IDENTIFIED BY 'password131';
 CREATE DATABASE keycloak CHARACTER SET utf8 COLLATE utf8_unicode_ci;
 GRANT ALL PRIVILEGES ON keycloak131.* TO 'keycloak'@'%';
 
+CREATE USER 'user131'@'%' IDENTIFIED BY 'password131';
+GRANT ALL PRIVILEGES ON user131.* TO 'pas'@'%';
+
 DROP TABLE IF EXISTS users;
 CREATE TABLE  users (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
