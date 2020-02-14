@@ -1,4 +1,4 @@
-CREATE USER 'keycloak'@'%' IDENTIFIED BY 'password';
+CREATE USER 'keycloak131'@'%' IDENTIFIED BY 'password131';
 CREATE DATABASE keycloak CHARACTER SET utf8 COLLATE utf8_unicode_ci;
 GRANT ALL PRIVILEGES ON keycloak131.* TO 'keycloak'@'%';
 
