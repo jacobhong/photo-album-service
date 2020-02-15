@@ -54,3 +54,5 @@ management:
   #        include: "info"
   security:
     enabled: false
+cors:
+  allowed-origin: ${CORS_ALLOWED_ORIGIN}
