@@ -35,10 +35,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   @Override
   protected void configure(HttpSecurity http) throws Exception {
     http
-//      .requiresChannel()// ssl config
-//      .anyRequest()
-//      .requiresSecure()
-//      .and()
+      .requiresChannel()// ssl config
+      .anyRequest()
+      .requiresSecure()
+      .and()
       .authorizeRequests(authorizeRequests ->
                            authorizeRequests
                              .antMatchers("/actuator/*").permitAll()

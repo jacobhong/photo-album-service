@@ -25,9 +25,9 @@ spring:
       max-file-size: -1
       max-request-size: -1
   datasource:
-    url: jdbc:mysql://localhost:3306/database?zeroDateTimeBehavior=convertToNull
-    username: user
-    password: password
+    url: jdbc:mysql://localhost:3306/pas?zeroDateTimeBehavior=convertToNull
+    username: user131
+    password: password131
     driver-class-name: com.mysql.jdbc.Driver
   jpa:
     properties:
@@ -49,3 +49,5 @@ keycloak:
 management:
   security:
     enabled: false
+cors:
+  allowed-origin: "*"

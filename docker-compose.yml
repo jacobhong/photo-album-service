@@ -9,7 +9,7 @@ services:
     networks:
       - auth-network
   mariadb:
-    image: mariadb
+    image: mariadb:10.4
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: password131
@@ -21,7 +21,6 @@ services:
     volumes:
       - ./docker/mysql/mysql:/var/lib/mysql
       - ./docker/sql:/docker-entrypoint-initdb.d
-    #      - /docker/sql:/etc/mysql/conf.d
     networks:
       - auth-network
   keycloak:

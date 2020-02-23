@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
@@ -17,8 +18,11 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -31,10 +35,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-//@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ExtendWith(SpringExtension.class)
 @ActiveProfiles("test")
+@Transactional
+//@DirtiesContext
 public class PhotoControllerIT {
   private static final Logger logger = LoggerFactory.getLogger(PhotoControllerIT.class);
 
@@ -53,7 +59,9 @@ public class PhotoControllerIT {
   @AfterEach
   public void afterAll() {
     logger.info("clearing test env");
-    entityManager.createNativeQuery("truncate photo;").executeUpdate();
+    entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=0;").executeUpdate();
+    entityManager.createNativeQuery("truncate table photo;").executeUpdate();
+    entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=1").executeUpdate();
   }
 
   @Test
