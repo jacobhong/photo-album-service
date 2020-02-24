@@ -51,3 +51,4 @@ management:
     enabled: false
 cors:
   allowed-origin: "*"
+require-ssl: false
