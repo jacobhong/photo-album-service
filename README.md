@@ -46,6 +46,8 @@ authenticate @ localhost:8443/auth keycloak::password
 ```$xslt
 create new realm : kooriim-fe
 create new client : kooriim-fe
+-create mapper in client
+-name: grants, token claim name: grants, claim json type: string
 create new identity provider: google
 -add new mapper of type Hardcoded Role: select koorim-fe
 create new role: kooriim-fe

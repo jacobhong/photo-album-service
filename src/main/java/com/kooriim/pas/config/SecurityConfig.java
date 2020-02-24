@@ -29,16 +29,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
   private String jwkSetUri;
 
+  @Value("${require-ssl}")
+  private boolean sslRequired;
+
   @Autowired
   private GoogleUserRegistration googleUserRegistration;
 
   @Override
   protected void configure(HttpSecurity http) throws Exception {
+    if (sslRequired == true) {
+      http
+        .requiresChannel()// ssl config
+        .anyRequest()
+        .requiresSecure();
+    }
     http
-      .requiresChannel()// ssl config
-      .anyRequest()
-      .requiresSecure()
-      .and()
       .authorizeRequests(authorizeRequests ->
                            authorizeRequests
                              .antMatchers("/actuator/*").permitAll()
