@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.web.filter.CorsFilter;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -44,6 +45,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .requiresSecure();
     }
     http
+      .cors()
+      .and()
       .authorizeRequests(authorizeRequests ->
                            authorizeRequests
                              .antMatchers("/actuator/*").permitAll()
@@ -68,6 +71,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     jwtProcessor.setJWSKeySelector(jwsKeySelector);
 
     return new NimbusJwtDecoder(jwtProcessor);
+  }
+
+  @Bean
+  public CorsFilter corsFilter() {
+   return new KooriimCorsFilter();
   }
 
   public Converter<Jwt, AbstractAuthenticationToken> grantedAuthoritiesExtractor() {

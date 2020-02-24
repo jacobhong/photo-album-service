@@ -15,8 +15,6 @@ import org.springframework.web.filter.CorsFilter;
 public class KooriimCorsFilter extends CorsFilter {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-  @Value("${cors.allowed-origin")
-  private static String allowedOrigin;
 
   public KooriimCorsFilter() {
     super(configurationSource());
@@ -25,12 +23,11 @@ public class KooriimCorsFilter extends CorsFilter {
   private static UrlBasedCorsConfigurationSource configurationSource() {
     CorsConfiguration config = new CorsConfiguration();
     config.setAllowCredentials(true);
-    config.addAllowedOrigin(allowedOrigin);
+    config.addAllowedOrigin("https://now.kooriim.com");
     config.addAllowedHeader("*");
     config.addAllowedMethod("*");
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", config);
     return source;
   }
-
 }
