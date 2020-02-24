@@ -45,8 +45,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .requiresSecure();
     }
     http
-      .cors()
-      .and()
       .authorizeRequests(authorizeRequests ->
                            authorizeRequests
                              .antMatchers("/actuator/*").permitAll()
@@ -71,11 +69,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     jwtProcessor.setJWSKeySelector(jwsKeySelector);
 
     return new NimbusJwtDecoder(jwtProcessor);
-  }
-
-  @Bean
-  public CorsFilter corsFilter() {
-   return new KooriimCorsFilter();
   }
 
   public Converter<Jwt, AbstractAuthenticationToken> grantedAuthoritiesExtractor() {
