@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -37,6 +38,14 @@ public class AlbumController {
   public ResponseEntity<Album> createAlbum(@RequestBody Album album) {
     logger.info("creating album {}", album.getTitle());
     return new ResponseEntity(albumService.saveAlbum(album), HttpStatus.OK);
+  }
+
+  @RequestMapping(value = "/{id}", method = RequestMethod.PATCH, consumes = "application/json")
+  public ResponseEntity<Void> addPhotosToAlbum(@PathVariable("id") Integer albumId,
+                                                @RequestBody List<Integer> ids) {
+    logger.info("adding photoIds: {}, to album: {}", ids, albumId);
+    albumService.addPhotosToAlbum(albumId, ids);
+    return new ResponseEntity(HttpStatus.OK);
 
   }
 }

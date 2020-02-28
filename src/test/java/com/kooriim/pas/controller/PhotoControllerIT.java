@@ -1,9 +1,12 @@
 package com.kooriim.pas.controller;
 
+import com.kooriim.pas.UriHelper;
 import com.kooriim.pas.domain.Photo;
 import com.kooriim.pas.repository.PhotoRepository;
 import com.kooriim.pas.service.PhotoService;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -18,13 +21,11 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -40,7 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @ExtendWith(SpringExtension.class)
 @ActiveProfiles("test")
 @Transactional
-//@DirtiesContext
 public class PhotoControllerIT {
   private static final Logger logger = LoggerFactory.getLogger(PhotoControllerIT.class);
 
@@ -55,6 +55,12 @@ public class PhotoControllerIT {
 
   @Autowired
   private PhotoRepository photoRepository;
+
+  @BeforeEach
+  public void before(){
+    final var httpClient = HttpClientBuilder.create().build();
+    restTemplate.getRestTemplate().setRequestFactory(new HttpComponentsClientHttpRequestFactory(httpClient));
+  }
 
   @AfterEach
   public void afterAll() {
@@ -80,7 +86,7 @@ public class PhotoControllerIT {
   @Test
   public void testGetPhotoById() {
     final var photo = createPhoto();
-    final var photoResult = restTemplate.getForObject(uriWithPathVariable(photo.getId()), Photo.class);
+    final var photoResult = restTemplate.getForObject(UriHelper.uriWithPathVariable("/photos/", photo.getId()), Photo.class);
     assertEquals(photo.getId(), photoResult.getId());
   }
 
@@ -88,7 +94,7 @@ public class PhotoControllerIT {
   public void testGetPhotoByIdWithSrc() {
     final var photo = createPhoto();
     final var photoResult = restTemplate
-                              .getForObject(uriWithPathVariableAndQueryParam(photo.getId(),
+                              .getForObject(UriHelper.uriWithPathVariableAndQueryParam("/photos/", photo.getId(),
                                 "srcImage",
                                 "true"),
                                 Photo.class);
@@ -98,9 +104,9 @@ public class PhotoControllerIT {
   @Test
   public void testGetPhotoById404() {
     final var photos = restTemplate
-                         .exchange(uriWithPathVariable(123),
+                         .exchange(UriHelper.uriWithPathVariable("/photos/",123),
                            HttpMethod.GET,
-                           httpEntity(),
+                           UriHelper.httpEntity(),
                            new ParameterizedTypeReference<List<Photo>>() {
                            });
     assertEquals(404, photos.getStatusCodeValue());
@@ -110,9 +116,9 @@ public class PhotoControllerIT {
   public void testGetPhotosWithThumbnail() {
     createPhoto();
     final var photos = restTemplate
-                         .exchange(uriWithQueryParam("thumbnail", "true"),
+                         .exchange(UriHelper.uriWithQueryParam("/photos", "thumbnail", "true"),
                            HttpMethod.GET,
-                           httpEntity(),
+                           UriHelper.httpEntity(),
                            new ParameterizedTypeReference<List<Photo>>() {
                            });
     assertNotNull(photos.getBody().get(0).getBase64ThumbnailPhoto());
@@ -122,9 +128,9 @@ public class PhotoControllerIT {
   public void testGetPhotsoWithSrc() {
     createPhoto();
     final var photos = restTemplate
-                         .exchange(uriWithQueryParam("srcImage", "true"),
+                         .exchange(UriHelper.uriWithQueryParam("/photos","srcImage", "true"),
                            HttpMethod.GET,
-                           httpEntity(),
+                           UriHelper.httpEntity(),
                            new ParameterizedTypeReference<List<Photo>>() {
                            });
     assertNotNull(photos.getBody().get(0).getBase64SrcPhoto());
@@ -148,9 +154,9 @@ public class PhotoControllerIT {
                                    .replaceAll("\\[", "")
                                    .replaceAll("]", "");
     restTemplate
-      .exchange(uriWithQueryParam("photoIds", photoIdsAsString),
+      .exchange(UriHelper.uri("/photos/"),
         HttpMethod.DELETE,
-        httpEntity(),
+        UriHelper.httpEntityWithBody(Arrays.asList("1")),
         Void.class);
     assertEquals(0, photoRepository.findAll().size());
   }
@@ -165,32 +171,5 @@ public class PhotoControllerIT {
     return restTemplate.exchange("/photos", HttpMethod.POST, requestEntity, Photo.class).getBody();
   }
 
-  private String uriWithQueryParam(String param, Object paramValue) {
-    return UriComponentsBuilder
-             .fromPath("/photos")
-             .queryParam(param, paramValue)
-             .build()
-             .toUriString();
-  }
 
-  private String uriWithPathVariable(Integer pathId) {
-    return UriComponentsBuilder
-             .fromPath("/photos/" + pathId)
-             .build()
-             .toUriString();
-  }
-
-  private String uriWithPathVariableAndQueryParam(Integer pathId, String param, String paramValue) {
-    return UriComponentsBuilder
-             .fromPath("/photos/" + pathId)
-             .queryParam(param, paramValue)
-             .build()
-             .toUriString();
-  }
-
-  private HttpEntity httpEntity() {
-    HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    return new HttpEntity<>(headers);
-  }
 }

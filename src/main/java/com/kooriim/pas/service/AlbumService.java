@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AlbumService {
@@ -30,11 +31,16 @@ public class AlbumService {
   public Album saveAlbum(Album album) {
     album.setGoogleId(SecurityContextHolder.getContext().getAuthentication().getName());
     final var savedAlbum = this.albumRepository.save(album);
-
-    album.getPhotoIds().forEach(id -> {
-      albumRepository.savePhotoAlbum(savedAlbum.getId(), id);
-      logger.info("saved record to photo_album, albumId: {} | photoId: {}", savedAlbum.getId(), id);
-    });
+    logger.info("saved album: {} id: {}", savedAlbum.getTitle(), savedAlbum.getId());
+    addPhotosToAlbum(album.getId(), album.getPhotoIds().stream().collect(Collectors.toList()));
     return savedAlbum;
+  }
+
+  @Transactional
+  public void addPhotosToAlbum(Integer albumId, List<Integer> ids) {
+    ids.forEach(id -> {
+      albumRepository.savePhotoAlbum(albumId, id);
+      logger.info("saved record to photo_album, albumId: {} | photoId: {}", albumId, id);
+    });
   }
 }
