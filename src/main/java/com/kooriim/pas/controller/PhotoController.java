@@ -24,7 +24,6 @@ public class PhotoController {
   @Autowired
   private PhotoService photoService;
 
-//  @PreAuthorize("hasAuthority('kooriim-fe")
   @RequestMapping(value = "")
   public ResponseEntity<List<Photo>> getPhotos(@RequestParam Map<String, String> params) {
     logger.info("getting all photos with queryParams: {}", params);
@@ -56,7 +55,7 @@ public class PhotoController {
   }
 
   @RequestMapping(value = "", method = RequestMethod.DELETE)
-  public ResponseEntity<Void> deletePhoto(@RequestBody List<Integer> ids) {
+  public ResponseEntity<Void> deletePhoto(@RequestParam("photoIds") List<Integer> ids) {
     logger.info("deleting photo id: {}", ids);
     photoService.deletePhotos(ids);
     return new ResponseEntity(HttpStatus.OK);

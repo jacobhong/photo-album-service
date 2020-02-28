@@ -40,6 +40,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -94,6 +95,21 @@ public class AlbumControllerIT {
   }
 
   @Test
+  public void testGetAlbumWithPhotos() {
+    restTemplate.exchange(UriHelper.uri("/albums"), HttpMethod.POST, UriHelper.httpEntityWithBody(createAlbumWithPhoto()), Album.class);
+    final var albums = restTemplate
+                         .exchange(UriHelper
+                                     .uriWithPathVariableAndQueryParam("/albums/",
+                                       1,
+                                       "withPhotos",
+                                       "true"),
+                           HttpMethod.GET,
+                           UriHelper.httpEntity(),
+                           Album.class);
+    assertEquals(1, albums.getBody().getPhotoIds().size());
+  }
+
+  @Test
   public void addPhotosToAlbum() {
     restTemplate.exchange(UriHelper.uri("/albums"), HttpMethod.POST, UriHelper.httpEntityWithBody(createAlbum()), Album.class);
     restTemplate.exchange(UriHelper.uri("/albums/1"), HttpMethod.PATCH, UriHelper.httpEntityWithBody(Arrays.asList("1")), Void.class);
@@ -106,13 +122,20 @@ public class AlbumControllerIT {
                            });
 
     assertEquals(1, photos.getBody().size());
-
   }
 
   private Album createAlbum() {
     final var album = new Album();
     album.setDescription("test");
     album.setTitle("test");
+    return album;
+  }
+
+  private Album createAlbumWithPhoto() {
+    final var album = new Album();
+    album.setDescription("test");
+    album.setTitle("test");
+    album.setPhotoIds(Set.of(1));
     return album;
   }
 

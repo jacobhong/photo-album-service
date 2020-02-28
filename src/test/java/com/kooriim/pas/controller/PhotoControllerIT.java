@@ -154,9 +154,9 @@ public class PhotoControllerIT {
                                    .replaceAll("\\[", "")
                                    .replaceAll("]", "");
     restTemplate
-      .exchange(UriHelper.uri("/photos/"),
+      .exchange(UriHelper.uriWithQueryParam("/photos/", "photoIds", photoIdsAsString),
         HttpMethod.DELETE,
-        UriHelper.httpEntityWithBody(Arrays.asList("1")),
+        UriHelper.httpEntity(),
         Void.class);
     assertEquals(0, photoRepository.findAll().size());
   }

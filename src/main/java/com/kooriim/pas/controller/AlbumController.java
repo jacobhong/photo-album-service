@@ -22,11 +22,11 @@ public class AlbumController {
   @Autowired
   private AlbumService albumService;
 
-//  @RequestMapping(value = "/{id}", method = RequestMethod.GET, consumes = "application/json")
-//  public ResponseEntity<Set<Album>> getAlbumById(@PathVariable(name = "id") Integer id) {
-//    logger.info("GETTING ALBUM");
-//    return new ResponseEntity(albumRepository.findById(id), HttpStatus.OK);
-//  }
+  @RequestMapping(value = "/{id}", method = RequestMethod.GET, consumes = "application/json")
+  public ResponseEntity<Set<Album>> getAlbumById(@PathVariable(name = "id") Integer id, @RequestParam("withPhotos") Boolean withPhotos) {
+    logger.info("getting album by id {}", id);
+    return new ResponseEntity(albumService.getAlbumById(id, withPhotos), HttpStatus.OK);
+  }
 
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ResponseEntity<Set<Album>> getAlbums() {
@@ -42,7 +42,7 @@ public class AlbumController {
 
   @RequestMapping(value = "/{id}", method = RequestMethod.PATCH, consumes = "application/json")
   public ResponseEntity<Void> addPhotosToAlbum(@PathVariable("id") Integer albumId,
-                                                @RequestBody List<Integer> ids) {
+                                               @RequestBody List<Integer> ids) {
     logger.info("adding photoIds: {}, to album: {}", ids, albumId);
     albumService.addPhotosToAlbum(albumId, ids);
     return new ResponseEntity(HttpStatus.OK);

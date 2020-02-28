@@ -19,5 +19,9 @@ public interface PhotoRepository extends JpaRepository<Photo, Integer> {
   @Query(value = "DELETE FROM photo_album where photo_id in (?1)", nativeQuery = true)
   void deletePhotosFromAlbum(List<Integer> photoId);
 
+  @Modifying
+  @Query(value = "DELETE FROM photo_album where album_id = ?1", nativeQuery = true)
+  void deleteAllPhotosByAlbumId(Integer albumId);
+
   List<Photo> getPhotosByGoogleId(String googleId);
 }
