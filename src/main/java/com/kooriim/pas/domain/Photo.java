@@ -151,4 +151,21 @@ public class Photo implements Serializable {
   public int hashCode() {
     return Objects.hash(id, title, filePath, thumbnailFilePath, description, base64SrcPhoto, base64ThumbnailPhoto, contentType, created, updated);
   }
+
+  @Override
+  public String toString() {
+    return "Photo{" +
+             "id=" + id +
+             ", title='" + title + '\'' +
+             ", filePath='" + filePath + '\'' +
+             ", thumbnailFilePath='" + thumbnailFilePath + '\'' +
+             ", description='" + description + '\'' +
+             ", base64SrcPhoto='" + base64SrcPhoto + '\'' +
+             ", base64ThumbnailPhoto='" + base64ThumbnailPhoto + '\'' +
+             ", googleId='" + googleId + '\'' +
+             ", contentType='" + contentType + '\'' +
+             ", created=" + created +
+             ", updated=" + updated +
+             '}';
+  }
 }

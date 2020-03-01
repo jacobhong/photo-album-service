@@ -29,7 +29,7 @@ public class UriHelper {
              .toUriString();
   }
 
-  public static String uriWithPathVariableAndQueryParam(String path, Integer pathId, String param, String paramValue) {
+  public static String uriWithPathVariableAndQueryParam(String path, Integer pathId, String param, Object paramValue) {
     return UriComponentsBuilder
              .fromPath(path + pathId)
              .queryParam(param, paramValue)

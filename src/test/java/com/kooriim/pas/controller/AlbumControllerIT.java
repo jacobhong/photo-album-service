@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -76,8 +77,11 @@ public class AlbumControllerIT {
   @BeforeEach
   public void before() {
     entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=0;").executeUpdate();
+//    entityManager.createNativeQuery("truncate table photo_album;").executeUpdate();
     entityManager.createNativeQuery("truncate table photo;").executeUpdate();
     entityManager.createNativeQuery("truncate table album;").executeUpdate();
+    entityManager.createNativeQuery("ALTER TABLE photo ALTER id RESTART with 1;").executeUpdate();
+    entityManager.createNativeQuery("ALTER TABLE album ALTER id RESTART with 1;").executeUpdate();
     entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=1").executeUpdate();
     insertPhotos();
     final var httpClient = HttpClientBuilder.create().build();
@@ -95,27 +99,12 @@ public class AlbumControllerIT {
   }
 
   @Test
-  public void testGetAlbumWithPhotos() {
-    restTemplate.exchange(UriHelper.uri("/albums"), HttpMethod.POST, UriHelper.httpEntityWithBody(createAlbumWithPhoto()), Album.class);
-    final var albums = restTemplate
-                         .exchange(UriHelper
-                                     .uriWithPathVariableAndQueryParam("/albums/",
-                                       1,
-                                       "withPhotos",
-                                       "true"),
-                           HttpMethod.GET,
-                           UriHelper.httpEntity(),
-                           Album.class);
-    assertEquals(1, albums.getBody().getPhotoIds().size());
-  }
-
-  @Test
-  public void addPhotosToAlbum() {
-    restTemplate.exchange(UriHelper.uri("/albums"), HttpMethod.POST, UriHelper.httpEntityWithBody(createAlbum()), Album.class);
-    restTemplate.exchange(UriHelper.uri("/albums/1"), HttpMethod.PATCH, UriHelper.httpEntityWithBody(Arrays.asList("1")), Void.class);
+  public void addPhotosToExistingAlbum() {
+    final var album = restTemplate.exchange(UriHelper.uri("/albums"), HttpMethod.POST, UriHelper.httpEntityWithBody(createAlbum()), Album.class);
+    restTemplate.exchange(UriHelper.uri("/albums/" + album.getBody().getId()), HttpMethod.PATCH, UriHelper.httpEntityWithBody(Arrays.asList("1")), Void.class);
 
     final var photos = restTemplate
-                         .exchange(UriHelper.uriWithQueryParam("/photos", "albumId", "1"),
+                         .exchange(UriHelper.uriWithQueryParam("/photos", "albumId", album.getBody().getId()),
                            HttpMethod.GET,
                            UriHelper.httpEntity(),
                            new ParameterizedTypeReference<List<Photo>>() {
@@ -135,7 +124,6 @@ public class AlbumControllerIT {
     final var album = new Album();
     album.setDescription("test");
     album.setTitle("test");
-    album.setPhotoIds(Set.of(1));
     return album;
   }
 

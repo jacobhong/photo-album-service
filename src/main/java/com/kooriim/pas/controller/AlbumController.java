@@ -21,12 +21,12 @@ public class AlbumController {
   private AlbumRepository albumRepository;
   @Autowired
   private AlbumService albumService;
-
-  @RequestMapping(value = "/{id}", method = RequestMethod.GET, consumes = "application/json")
-  public ResponseEntity<Set<Album>> getAlbumById(@PathVariable(name = "id") Integer id, @RequestParam("withPhotos") Boolean withPhotos) {
-    logger.info("getting album by id {}", id);
-    return new ResponseEntity(albumService.getAlbumById(id, withPhotos), HttpStatus.OK);
-  }
+//
+//  @RequestMapping(value = "/{id}", method = RequestMethod.GET, consumes = "application/json")
+//  public ResponseEntity<Set<Album>> getAlbumById(@PathVariable(name = "id") Integer id, @RequestParam Map<String, String> params) {
+//    logger.info("getting album by id {}", id);
+//    return new ResponseEntity(albumService.getAlbumById(id, params), HttpStatus.OK);
+//  }
 
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ResponseEntity<Set<Album>> getAlbums() {
@@ -35,9 +35,9 @@ public class AlbumController {
   }
 
   @RequestMapping(value = "", method = RequestMethod.POST, consumes = "application/json")
-  public ResponseEntity<Album> createAlbum(@RequestBody Album album) {
+  public ResponseEntity<Album> saveOrUpdateAlbum(@RequestBody Album album) {
     logger.info("creating album {}", album.getTitle());
-    return new ResponseEntity(albumService.saveAlbum(album), HttpStatus.OK);
+    return new ResponseEntity(albumService.saveOrUpdateAlbum(album), HttpStatus.OK);
   }
 
   @RequestMapping(value = "/{id}", method = RequestMethod.PATCH, consumes = "application/json")

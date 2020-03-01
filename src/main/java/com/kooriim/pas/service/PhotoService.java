@@ -18,7 +18,9 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
+
 import org.springframework.transaction.annotation.Transactional;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -45,6 +47,7 @@ public class PhotoService {
     final var photo = photoRepository.findById(photoId);
     if (setSrcImage == true) {
       photo.ifPresent(p -> setBase64SrcPhoto(p));
+      logger.info("found photoId {}", photo.get().getId());
     }
     return photo;
   }
@@ -116,7 +119,7 @@ public class PhotoService {
     }
   }
 
-  private void setBase64Thumbnail(Photo photo) {
+  public void setBase64Thumbnail(Photo photo) {
     final byte[] bytes;
     try {
       bytes = Files.readAllBytes(Paths.get(photo.getThumbnailFilePath()));
@@ -126,7 +129,7 @@ public class PhotoService {
     }
   }
 
-  private void setBase64SrcPhoto(Photo photo) {
+  public void setBase64SrcPhoto(Photo photo) {
     final byte[] bytes;
     try {
       bytes = Files.readAllBytes(Paths.get(photo.getFilePath()));
