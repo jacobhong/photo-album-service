@@ -94,8 +94,8 @@ public class PhotoService {
                            .getOriginalFilename()
                            .substring(0, file.getOriginalFilename().lastIndexOf(".")) + ".jpg";
     final var dir = new File(imgDir);
-    if (!dir.isDirectory()) {
-      Files.createDirectory(dir.toPath());
+    if (!dir.exists()) {
+      dir.mkdir();
       logger.info("created directory {}", imgDir);
     }
     final var filePath = imgDir + "/" + fileName;
