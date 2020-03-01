@@ -93,6 +93,11 @@ public class PhotoService {
     final var fileName = file
                            .getOriginalFilename()
                            .substring(0, file.getOriginalFilename().lastIndexOf(".")) + ".jpg";
+    final var dir = new File(imgDir);
+    if (!dir.isDirectory()) {
+      Files.createDirectory(dir.toPath());
+      logger.info("created directory {}", imgDir);
+    }
     final var filePath = imgDir + "/" + fileName;
     final var thumbnailFilePath = imgDir + "/" + "thumbnail." + fileName;
     final var contentType = "jpg";
