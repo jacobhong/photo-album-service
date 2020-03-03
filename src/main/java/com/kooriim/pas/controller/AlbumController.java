@@ -6,6 +6,7 @@ import com.kooriim.pas.service.AlbumService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,9 +30,9 @@ public class AlbumController {
 //  }
 
   @RequestMapping(value = "", method = RequestMethod.GET)
-  public ResponseEntity<Set<Album>> getAlbums() {
+  public ResponseEntity<Set<Album>> getAlbums(Pageable pageable) {
     logger.info("getting all albums");
-    return new ResponseEntity(albumService.getAlbums(), HttpStatus.OK);
+    return new ResponseEntity(albumService.getAlbums(pageable), HttpStatus.OK);
   }
 
   @RequestMapping(value = "", method = RequestMethod.POST, consumes = "application/json")
@@ -45,6 +46,14 @@ public class AlbumController {
                                                @RequestBody List<Integer> ids) {
     logger.info("adding photoIds: {}, to album: {}", ids, albumId);
     albumService.addPhotosToAlbum(albumId, ids);
+    return new ResponseEntity(HttpStatus.OK);
+
+  }
+
+  @RequestMapping(value = "/{id}", method = RequestMethod.DELETE)
+  public ResponseEntity<Void> delete(@PathVariable("id") Integer albumId) {
+    logger.info("deleting album: {}", albumId);
+    albumService.deleteAlbum(albumId);
     return new ResponseEntity(HttpStatus.OK);
 
   }

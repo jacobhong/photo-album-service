@@ -5,6 +5,8 @@ import com.kooriim.pas.service.PhotoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,9 +27,9 @@ public class PhotoController {
   private PhotoService photoService;
 
   @RequestMapping(value = "")
-  public ResponseEntity<List<Photo>> getPhotos(@RequestParam Map<String, String> params) {
-    logger.info("getting all photos with queryParams: {}", params);
-    return new ResponseEntity(photoService.getPhotosByQueryParams(params), HttpStatus.OK);
+  public ResponseEntity<Page<List<Photo>>> getPhotos(@RequestParam Map<String, String> params, Pageable pageable) {
+    logger.info("getting all photos with queryParams: {} pageable: {}", params, pageable);
+    return new ResponseEntity(photoService.getPhotosByQueryParams(params, pageable), HttpStatus.OK);
   }
 
   @RequestMapping(value = "/{id}")

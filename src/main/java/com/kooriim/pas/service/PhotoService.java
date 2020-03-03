@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -52,7 +53,7 @@ public class PhotoService {
     return photo;
   }
 
-  public List<Photo> getPhotosByQueryParams(Map<String, String> params) {
+  public List<Photo> getPhotosByQueryParams(Map<String, String> params, Pageable pageable) {
     logger.info("getting photo for googleId {}", SecurityContextHolder
                                                    .getContext()
                                                    .getAuthentication()
@@ -62,13 +63,13 @@ public class PhotoService {
 
     if (params.containsKey("albumId")) {
       photoRepository
-        .getPhotosByAlbumId(Integer.valueOf(params.get("albumId")))
+        .getPhotosByAlbumId(Integer.valueOf(params.get("albumId")), pageable)
         .ifPresent(photo -> photos.addAll(photo));
     } else {
       photos.addAll(photoRepository.getPhotosByGoogleId(SecurityContextHolder
                                                           .getContext()
                                                           .getAuthentication()
-                                                          .getName()));
+                                                          .getName(), pageable));
     }
 
     photos.forEach(p -> {
@@ -93,11 +94,6 @@ public class PhotoService {
     final var fileName = file
                            .getOriginalFilename()
                            .substring(0, file.getOriginalFilename().lastIndexOf(".")) + ".jpg";
-    final var dir = new File(imgDir);
-    if (!dir.exists()) {
-      dir.mkdir();
-      logger.info("created directory {}", imgDir);
-    }
     final var filePath = imgDir + "/" + fileName;
     final var thumbnailFilePath = imgDir + "/" + "thumbnail." + fileName;
     final var contentType = "jpg";

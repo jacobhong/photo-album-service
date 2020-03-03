@@ -113,6 +113,23 @@ public class AlbumControllerIT {
     assertEquals(1, photos.getBody().size());
   }
 
+  @Test
+  public void deleteAlbum() {
+    final var album = restTemplate.exchange(UriHelper.uri("/albums"), HttpMethod.POST, UriHelper.httpEntityWithBody(createAlbum()), Album.class);
+    restTemplate.exchange(UriHelper.uri("/albums/" + album.getBody().getId()), HttpMethod.PATCH, UriHelper.httpEntityWithBody(Arrays.asList("1")), Void.class);
+    restTemplate.exchange(UriHelper.uri("/albums/" + album.getBody().getId()), HttpMethod.DELETE, UriHelper.httpEntity(), Void.class);
+
+    final var photos = restTemplate
+                         .exchange(UriHelper.uriWithQueryParam("/photos", "albumId", album.getBody().getId()),
+                           HttpMethod.GET,
+                           UriHelper.httpEntity(),
+                           new ParameterizedTypeReference<List<Photo>>() {
+                           });
+
+    assertEquals(0, photos.getBody().size());
+  }
+
+
   private Album createAlbum() {
     final var album = new Album();
     album.setDescription("test");
