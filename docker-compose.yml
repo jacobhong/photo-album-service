@@ -8,6 +8,8 @@ services:
       - "8080:8080"
     networks:
       - auth-network
+    volumes:
+      - ./docker/images:/opt/images
   mariadb:
     image: mariadb:10.4
     restart: always
