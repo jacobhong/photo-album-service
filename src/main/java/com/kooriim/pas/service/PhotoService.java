@@ -72,7 +72,7 @@ public class PhotoService {
                                                           .getName(), pageable));
     }
 
-    photos.forEach(p -> {
+    photos.parallelStream().forEach(p -> {
       if (params.containsKey("thumbnail") && params.get("thumbnail").equalsIgnoreCase("true")) {
         setBase64Thumbnail(p);
       }
