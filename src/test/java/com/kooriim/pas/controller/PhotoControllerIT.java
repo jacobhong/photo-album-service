@@ -17,6 +17,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -173,7 +175,7 @@ public class PhotoControllerIT {
         HttpMethod.PATCH,
         UriHelper.httpEntityWithBody(List.of(photo)),
         Void.class);
-    assertEquals(true, photoRepository.findByIsPublicTrue().get().get(0).getIsPublic());
+    assertEquals(true, photoRepository.findByIsPublicTrue(PageRequest.of(0, 10)).get().get(0).getIsPublic());
   }
 
   private Photo createPhoto() {
