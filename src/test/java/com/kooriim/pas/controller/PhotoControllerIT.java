@@ -161,6 +161,21 @@ public class PhotoControllerIT {
     assertEquals(0, photoRepository.findAll().size());
   }
 
+  /**
+   * Set isPublic to true
+   */
+  @Test
+  public void testPatchPhotos() {
+    final var photo = createPhoto();
+    photo.setPublic(true);
+    restTemplate
+      .exchange(UriHelper.uri("/photos/"),
+        HttpMethod.PATCH,
+        UriHelper.httpEntityWithBody(List.of(photo)),
+        Void.class);
+    assertEquals(true, photoRepository.findByIsPublicTrue().get().get(0).getPublic());
+  }
+
   private Photo createPhoto() {
     final var headers = new HttpHeaders();
     final var form = new LinkedMultiValueMap<>();

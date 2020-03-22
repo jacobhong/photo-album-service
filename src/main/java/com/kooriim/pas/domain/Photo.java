@@ -1,6 +1,8 @@
 package com.kooriim.pas.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.annotations.SelectBeforeUpdate;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.*;
@@ -11,6 +13,8 @@ import java.util.Objects;
 @Entity
 @Table(name = "photo")
 @JsonIgnoreProperties(ignoreUnknown = true)
+@DynamicUpdate
+@SelectBeforeUpdate
 public class Photo implements Serializable {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,6 +33,8 @@ public class Photo implements Serializable {
   @Column(name = "google_id")
   private String googleId;
   private String contentType;
+  @Column(name ="is_public", nullable = false, columnDefinition = "BIT", length = 1)
+  private Boolean isPublic;
   private Date created;
   private Date updated;
 
@@ -118,6 +124,14 @@ public class Photo implements Serializable {
 
   public void setGoogleId(String googleId) {
     this.googleId = googleId;
+  }
+
+  public Boolean getIsPublic() {
+    return isPublic;
+  }
+
+  public void setIsPublic(Boolean isPublic) {
+    this.isPublic = isPublic;
   }
 
   public static Photo newInstance(MultipartFile file, String filePath, String thumbnailFilePath, String contentType, String googleId) {

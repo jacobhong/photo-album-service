@@ -65,11 +65,13 @@ public class PhotoService {
       photoRepository
         .getPhotosByAlbumId(Integer.valueOf(params.get("albumId")), pageable)
         .ifPresent(photo -> photos.addAll(photo));
+    } else if (params.containsKey("publicView")) {
+      photoRepository.findByIsPublicTrue().ifPresent(p -> photos.addAll(p));
     } else {
-      photos.addAll(photoRepository.getPhotosByGoogleId(SecurityContextHolder
-                                                          .getContext()
-                                                          .getAuthentication()
-                                                          .getName(), pageable));
+      photoRepository.getPhotosByGoogleId(SecurityContextHolder
+                                            .getContext()
+                                            .getAuthentication()
+                                            .getName(), pageable).ifPresent(p -> photos.addAll(p));
     }
 
     photos.forEach(p -> {
@@ -180,5 +182,9 @@ public class PhotoService {
       .size(360, 270)
       .outputFormat("jpg")
       .toFiles(new File("/opt/images"), Rename.PREFIX_DOT_THUMBNAIL);
+  }
+
+  public void patchPhotos(List<Photo> photos) {
+    photoRepository.saveAll(photos);
   }
 }

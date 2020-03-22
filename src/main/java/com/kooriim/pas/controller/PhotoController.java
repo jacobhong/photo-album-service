@@ -63,6 +63,13 @@ public class PhotoController {
     return new ResponseEntity(HttpStatus.OK);
   }
 
+  @RequestMapping(value = "", method = RequestMethod.PATCH)
+  public ResponseEntity<Void> patchPhotos(@RequestBody List<Photo> photos) {
+    logger.info("patching photos: {}", photos);
+    photoService.patchPhotos(photos);
+    return new ResponseEntity(HttpStatus.OK);
+  }
+
   @RequestMapping(value = "", method = RequestMethod.POST, consumes = "multipart/form-data")
   public ResponseEntity<Photo> create(@RequestParam("file") MultipartFile file) throws IOException {
     logger.info("Creating photo {}", file.getName());

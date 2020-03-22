@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS photo (
     content_type VARCHAR(10) NOT NULL,
     description VARCHAR(255) DEFAULT NULL,
     google_id VARCHAR(255) NOT NULL,
+    is_public TINYINT(1) DEFAULT 0,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
     FOREIGN KEY (google_id) REFERENCES users(google_id)
