@@ -167,13 +167,13 @@ public class PhotoControllerIT {
   @Test
   public void testPatchPhotos() {
     final var photo = createPhoto();
-    photo.setPublic(true);
+    photo.setIsPublic(true);
     restTemplate
       .exchange(UriHelper.uri("/photos/"),
         HttpMethod.PATCH,
         UriHelper.httpEntityWithBody(List.of(photo)),
         Void.class);
-    assertEquals(true, photoRepository.findByIsPublicTrue().get().get(0).getPublic());
+    assertEquals(true, photoRepository.findByIsPublicTrue().get().get(0).getIsPublic());
   }
 
   private Photo createPhoto() {

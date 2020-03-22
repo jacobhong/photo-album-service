@@ -66,7 +66,7 @@ public class PhotoService {
         .getPhotosByAlbumId(Integer.valueOf(params.get("albumId")), pageable)
         .ifPresent(photo -> photos.addAll(photo));
     } else if (params.containsKey("publicView")) {
-      photoRepository.findByIsPublicTrue().ifPresent(p -> photos.addAll(p));
+      photoRepository.findByIsPublicTrue(pageable).ifPresent(p -> photos.addAll(p));
     } else {
       photoRepository.getPhotosByGoogleId(SecurityContextHolder
                                             .getContext()

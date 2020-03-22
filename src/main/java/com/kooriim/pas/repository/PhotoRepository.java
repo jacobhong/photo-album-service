@@ -17,7 +17,7 @@ public interface PhotoRepository extends JpaRepository<Photo, Integer> {
   @Query(value = "SELECT * FROM photo p INNER JOIN photo_album pa ON p.id=pa.photo_id WHERE pa.album_id=?1", nativeQuery = true)
   Optional<List<Photo>> getPhotosByAlbumId(Integer id, Pageable pageable);
 
-  Optional<List<Photo>> findByIsPublicTrue();
+  Optional<List<Photo>> findByIsPublicTrue(Pageable pageable);
 
   @Modifying
   @Query(value = "DELETE FROM photo_album where photo_id in (?1)", nativeQuery = true)
