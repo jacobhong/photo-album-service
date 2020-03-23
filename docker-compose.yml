@@ -38,7 +38,7 @@ services:
       DB_SCHEMA: keycloak
 #      KEYCLOAK_LOGLEVEL: DEBUG
     volumes:
-      - ./docker/keystore:/etc/x509/https
+      - ./docker/keystore/keycloak:/etc/x509/https
     ports:
       - "8081:8080"
       - "8443:8443"
