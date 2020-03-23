@@ -22,7 +22,12 @@ docker tag photo-album-service:latest 500536527570.dkr.ecr.us-west-1.amazonaws.c
 docker push 500536527570.dkr.ecr.us-west-1.amazonaws.com/photo-album-service:latest
 ec2-54-183-228-18.us-west-1.compute.amazonaws.com
 ```
+create real cert with certbot
+```
+https://stackoverflow.com/questions/52674979/keycloak-ssl-setup-using-docker-image
+```
 
+DEPRECATED(use certbot)
 create private cert for testing
 ```$xslt
 keytool -genkeypair -alias keycloak -keyalg RSA -keystore keycloak.jks -validity 10950
