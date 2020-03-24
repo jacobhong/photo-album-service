@@ -39,7 +39,7 @@ openssl pkcs12 -in keycloak.p12 -nocerts -nodes -out tls.key
 import existing crt into existing keystore
 
 ```$xslt
-openssl pkcs12 -export -name keycloak -in tls.crt -inkey tls.key -out keystore.p12
+openssl pkcs12 -export -name keycloak -in docker/keystore/keycloak/tls.crt -inkey docker/keystore/keycloak/tls.key -out keystore.p12
 ```
 
 configure keycloak with realm + role + client + google identity provider
