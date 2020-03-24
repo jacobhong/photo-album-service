@@ -9,7 +9,7 @@ server:
     key-store-password: ${KEYSTORE_PASSWORD}
     key-store-type: PKCS12
     protocol: TLS
-    enabled-protocols: TLSv1.2,TLSv1.3
+    enabled-protocols: TLSv1.3
 spring:
   security:
     #    user:
