@@ -30,6 +30,7 @@ build/*
 
 dependency-reduced-pom.xml
 docker/mysql/*
+docker/images/*
 dump.rdb
 interpolated*.xml
 lib/
