@@ -48,6 +48,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
       .authorizeRequests(authorizeRequests ->
                            authorizeRequests
                              .antMatchers("/actuator/*").permitAll()
+//                             .antMatchers("/public-gallery/**").permitAll()
                              .antMatchers("/photos/**").hasAuthority("kooriim-fe")
                              .antMatchers("/albums/**").hasAuthority("kooriim-fe")
                              .antMatchers("/users/**").hasAuthority("kooriim-fe")
