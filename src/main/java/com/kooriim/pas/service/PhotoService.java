@@ -152,19 +152,25 @@ public class PhotoService {
   private File compressAndSavePhoto(MultipartFile file, String filePath) {
     logger.info("Saving photo {} to imgDir {}", file.getOriginalFilename(), filePath);
     try {
-      final var image = ImageIO.read(file.getInputStream());
+      var image = ImageIO.read(file.getInputStream());
+      final var widthRatio =  1920f / image.getWidth();
+      final var heightRatio = 1080f / image.getHeight();
+      final var ratio = Math.min(widthRatio, heightRatio);
+      final var width = image.getWidth() * ratio;
+      final var height = image.getHeight() * ratio;
+      image = Thumbnails.of(image)
+        .size(Math.round(width), Math.round(height))
+        .asBufferedImage();
       final var compressedImageFile = new File(filePath);
       final var os = new FileOutputStream(compressedImageFile);
       final var writers = ImageIO.getImageWritersByFormatName("jpg");
       final var writer = writers.next();
-
       final var ios = ImageIO.createImageOutputStream(os);
       writer.setOutput(ios);
-
       final var param = writer.getDefaultWriteParam();
 
       param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-      param.setCompressionQuality(0.75f);  // Change the quality value you prefer
+//      param.setCompressionQuality(0.7f);  // Change the quality value you prefer
       writer.write(null, new IIOImage(image, null, null), param);
 
       os.close();
