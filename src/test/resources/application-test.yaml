@@ -31,8 +31,6 @@ image-directory: /opt/images
 management:
   security:
     enabled: false
-cors:
-  allowed-origin: "*"
 #logging:
 #  level:
 #    org:
