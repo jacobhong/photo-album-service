@@ -23,7 +23,7 @@ public class KooriimCorsFilter extends CorsFilter {
   private static UrlBasedCorsConfigurationSource configurationSource() {
     CorsConfiguration config = new CorsConfiguration();
     config.setAllowCredentials(true);
-    config.addAllowedOrigin("*");
+    config.addAllowedOrigin("https://now.kooriim.com");
     config.addAllowedHeader("*");
     config.addAllowedMethod("*");
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

@@ -93,14 +93,12 @@ public class PhotoService {
                                                   .getContext()
                                                   .getAuthentication()
                                                   .getName());
-    final var fileName = file
-                           .getOriginalFilename()
-                           .substring(0, file.getOriginalFilename().lastIndexOf(".")) + ".jpg";
+    final var fileName = file.getOriginalFilename();
     final var filePath = imgDir + "/" + fileName;
     final var thumbnailFilePath = imgDir + "/" + "thumbnail." + fileName;
-    final var contentType = "jpg";
-    final var compressedImage = compressAndSavePhoto(file, filePath);
-    saveThumbnail(compressedImage);
+    final var contentType = file.getOriginalFilename().toLowerCase().endsWith((".png")) ? "png" : "jpg";
+    final var compressedImage = compressAndSavePhoto(file, filePath, contentType);
+    saveThumbnail(compressedImage, contentType);
     return photoRepository.save(Photo.newInstance(file, filePath, thumbnailFilePath, contentType, SecurityContextHolder
                                                                                                     .getContext()
                                                                                                     .getAuthentication()
@@ -149,7 +147,7 @@ public class PhotoService {
              + StringUtils.newStringUtf8(Base64.encodeBase64(bytes, false));
   }
 
-  private File compressAndSavePhoto(MultipartFile file, String filePath) {
+  private File compressAndSavePhoto(MultipartFile file, String filePath, String contentType) {
     logger.info("Saving photo {} to imgDir {}", file.getOriginalFilename(), filePath);
     try {
       var image = ImageIO.read(file.getInputStream());
@@ -163,7 +161,7 @@ public class PhotoService {
         .asBufferedImage();
       final var compressedImageFile = new File(filePath);
       final var os = new FileOutputStream(compressedImageFile);
-      final var writers = ImageIO.getImageWritersByFormatName("jpg");
+      final var writers = ImageIO.getImageWritersByFormatName(contentType);
       final var writer = writers.next();
       final var ios = ImageIO.createImageOutputStream(os);
       writer.setOutput(ios);
@@ -183,10 +181,10 @@ public class PhotoService {
     }
   }
 
-  private void saveThumbnail(File file) throws IOException {
+  private void saveThumbnail(File file, String contentType) throws IOException {
     Thumbnails.of(file)
       .size(360, 270)
-      .outputFormat("jpg")
+      .outputFormat(contentType)
       .toFiles(new File("/opt/images"), Rename.PREFIX_DOT_THUMBNAIL);
   }
 
