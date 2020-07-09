@@ -3,6 +3,7 @@ package com.kooriim.pas.domain;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.SelectBeforeUpdate;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.*;
@@ -134,12 +135,12 @@ public class Photo implements Serializable {
     this.isPublic = isPublic;
   }
 
-  public static Photo newInstance(MultipartFile file, String filePath, String thumbnailFilePath, String contentType, String googleId) {
+  public static Photo newInstance(FilePart file, String filePath, String thumbnailFilePath, String contentType, String googleId) {
     final var photo = new Photo();
     photo.setContentType(contentType);
     photo.setFilePath(filePath);
     photo.setThumbnailFilePath(thumbnailFilePath);
-    photo.setTitle(file.getOriginalFilename());
+    photo.setTitle(file.filename());
     photo.setGoogleId(googleId);
     return photo;
   }

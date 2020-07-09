@@ -1,142 +1,167 @@
 package com.kooriim.pas.service;
 
-import com.kooriim.pas.repository.AlbumRepository;
-import com.kooriim.pas.repository.PhotoRepository;
 import com.kooriim.pas.domain.Photo;
+import com.kooriim.pas.repository.PhotoRepository;
 import net.coobird.thumbnailator.Thumbnails;
-import net.coobird.thumbnailator.name.Rename;
-import org.apache.tomcat.util.codec.binary.Base64;
-import org.apache.tomcat.util.codec.binary.StringUtils;
+import org.apache.commons.codec.binary.StringUtils;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.*;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
-
-import org.springframework.transaction.annotation.Transactional;
-
-import java.io.File;
-import java.io.FileOutputStream;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class PhotoService {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
+  private static final String S3_BUCKET = "https://kooriim-images.s3-us-west-1.amazonaws.com/";
   @Value("${image-directory}")
   private String imgDir;
 
   @Autowired
   private PhotoRepository photoRepository;
 
-  @Autowired
-  private AlbumRepository albumRepository;
+//  @Autowired
+//  private AlbumRepository albumRepository;
+
+  @Autowired()
+  @Qualifier("awsS3Client")
+  private S3Client awsS3Client;
 
 
-  public Optional<Photo> getPhotoById(Integer photoId, Boolean setSrcImage) {
-    final var photo = photoRepository.findById(photoId);
-    if (setSrcImage == true) {
-      photo.ifPresent(p -> setBase64SrcPhoto(p));
-      logger.info("found photoId {}", photo.get().getId());
-    }
-    return photo;
-  }
-
-  public List<Photo> getPhotosByQueryParams(Map<String, String> params, Pageable pageable) {
-    logger.info("getting photo for googleId {}", SecurityContextHolder
+  public Mono<Photo> getPhotoById(Integer photoId, Boolean setSrcImage) {
+    logger.info("getting photo for googleId {}", ReactiveSecurityContextHolder
                                                    .getContext()
-                                                   .getAuthentication()
-                                                   .getName());
-    final var response = new ArrayList<Photo>();
-    final var photos = new ArrayList<Photo>();
+                                                   .map(SecurityContext::getAuthentication)
+                                                   .map(Authentication::getName));
+    return photoRepository.getPhotoById(photoId).map(photo -> {
+      if (setSrcImage == true) {
+        setBase64SrcPhoto(photo);
+        logger.info("found photoId {}", photo.getId());
+      }
+      return photo;
+    }).doOnNext(p -> logger.info("got p"));
+  }
 
-    if (params.containsKey("albumId")) {
-      photoRepository
-        .getPhotosByAlbumId(Integer.valueOf(params.get("albumId")), pageable)
-        .ifPresent(photo -> photos.addAll(photo));
-    } else if (params.containsKey("publicView")) {
-      photoRepository.findByIsPublicTrue(pageable).ifPresent(p -> photos.addAll(p));
-    } else {
-      photoRepository.getPhotosByGoogleId(SecurityContextHolder
-                                            .getContext()
-                                            .getAuthentication()
-                                            .getName(), pageable).ifPresent(p -> photos.addAll(p));
+  public Mono<List<Photo>> getPhotosByQueryParams(MultiValueMap<String, String> params, Pageable pageable) {
+    return ReactiveSecurityContextHolder
+             .getContext()
+             .publishOn(Schedulers.elastic())
+             .map(SecurityContext::getAuthentication)
+             .map(Authentication::getName)
+             .doOnNext(name -> logger.info("getting photo for googleId {}", name))
+             .flatMap(name -> {
+               if (params.containsKey("albumId")) {
+                 logger.info("Fetching photos by albumID");
+                 return photoRepository
+                          .getPhotosByAlbumId(Integer.valueOf(params.toSingleValueMap().get("albumId")), pageable)
+                          .map(photos -> {
+                            photos.forEach(photo -> setBase64Photo(params.toSingleValueMap(), photo));
+                            return photos;
+                          }).doOnNext(photos -> logger.info("fetched photos: {}", photos));
+               } else {
+                 logger.info("Fetching photos by googleID");
+                 return photoRepository
+                          .getPhotosByGoogleId(name, pageable)
+                          .map(photos -> {
+                            photos.forEach(photo -> setBase64Photo(params.toSingleValueMap(), photo));
+                            return photos;
+                          }).doOnNext(photos -> logger.info("fetched photos: {}", photos));
+               }
+             });
+
+  }
+
+  private Publisher<? extends Photo> setBase64Photo(Map<String, String> params, Photo photo) {
+    if (params.containsKey("thumbnail") && params.get("thumbnail").equalsIgnoreCase("true")) {
+      setBase64Thumbnail(photo);
     }
-
-    photos.forEach(p -> {
-      if (params.containsKey("thumbnail") && params.get("thumbnail").equalsIgnoreCase("true")) {
-        setBase64Thumbnail(p);
-      }
-      if (params.containsKey("srcImage") && params.get("srcImage").equalsIgnoreCase("true")) {
-        setBase64SrcPhoto(p);
-      }
-      response.add(p);
-    });
-
-    return response;
+    if (params.containsKey("srcImage") && params.get("srcImage").equalsIgnoreCase("true")) {
+      setBase64SrcPhoto(photo);
+    }
+    return Flux.just(photo);
   }
 
-  @Transactional
-  public Photo savePhoto(MultipartFile file) throws IOException {
-    logger.info("saving photo for googleId {}", SecurityContextHolder
-                                                  .getContext()
-                                                  .getAuthentication()
-                                                  .getName());
-    final var fileName = file.getOriginalFilename();
-    final var filePath = imgDir + "/" + fileName;
-    final var thumbnailFilePath = imgDir + "/" + "thumbnail." + fileName;
-    final var contentType = file.getOriginalFilename().toLowerCase().endsWith((".png")) ? "png" : "jpg";
-    final var compressedImage = compressAndSavePhoto(file, filePath, contentType);
-    saveThumbnail(compressedImage, contentType);
-    return photoRepository.save(Photo.newInstance(file, filePath, thumbnailFilePath, contentType, SecurityContextHolder
-                                                                                                    .getContext()
-                                                                                                    .getAuthentication()
-                                                                                                    .getName()));
+  public Mono<Photo> savePhoto(FilePart file) {
+    return ReactiveSecurityContextHolder
+             .getContext()
+             .publishOn(Schedulers.elastic())
+             .map(SecurityContext::getAuthentication)
+             .map(Authentication::getName)
+             .doOnNext(name -> logger.info("getting photo for googleId {}", name))
+             .flatMap(name -> {
+               final var contentType = file.filename().toLowerCase().endsWith((".png")) ? "png" : "jpg";
+               final var fileName = file.filename().toLowerCase();
+               final var thumbnailPath = fileName.substring(0, fileName.lastIndexOf(".") - 1) + ".thumbnail." + contentType;
+               compressAndSavePhoto(file, contentType);
+               return photoRepository.save(Photo.newInstance(file, fileName, thumbnailPath, contentType, name));
+             });
+
   }
 
-  @Transactional
   public void deletePhotos(List<Integer> ids) {
-    try {
-      final var photos = photoRepository.findAllById(ids);
-      photoRepository.deletePhotosFromAlbum(ids);
-      this.photoRepository.deleteAll(photos);
-      for (Photo photo : photos) {
-        Files.delete(Path.of(photo.getFilePath()));
-        Files.delete(Path.of(photo.getThumbnailFilePath()));
-      }
-    } catch (IOException e) {
-      logger.error("Failed deleting photo ids: [{}], stackTrace: {}", ids, e.getMessage());
-    }
+    photoRepository.getByIds(ids)
+      .doOnNext(photos -> photoRepository.deleteByIds(ids))
+      .doOnNext(photos -> {
+        var deletePhotos = photos
+                             .stream()
+                             .map(photo -> ObjectIdentifier.builder().key(photo.getFilePath()).build()).collect(Collectors.toList());
+        var deleteThumbnails = photos
+                                 .stream()
+                                 .map(photo -> ObjectIdentifier.builder().key(photo.getThumbnailFilePath()).build()).collect(Collectors.toList());
+        deletePhotos.addAll(deleteThumbnails);
+        photos.forEach(photo -> awsS3Client.deleteObjects(DeleteObjectsRequest
+                                                            .builder()
+                                                            .delete(Delete.builder().objects(deletePhotos).build())
+                                                            .build()));
+      });
   }
 
   public void setBase64Thumbnail(Photo photo) {
     final byte[] bytes;
     try {
-      bytes = Files.readAllBytes(Paths.get(photo.getThumbnailFilePath()));
-      photo.setBase64ThumbnailPhoto(generateBase64Image(photo, bytes));
-    } catch (IOException e) {
-      logger.error("Failed to set base64Thumbnail with title: {}", photo.getTitle(), e.getMessage());
+      logger.info("fetching image from s3 {}", photo.getThumbnailFilePath());
+      bytes = awsS3Client.getObjectAsBytes(GetObjectRequest.builder().key(photo.getThumbnailFilePath().toLowerCase()).bucket("kooriim-images").build()).asByteArray();
+      photo.setBase64SrcPhoto(generateBase64Image(photo, bytes));
+    } catch (Exception e) {
+      logger.error("Failed to set base64SrcPhoto with title: {}, error: {}", photo.getTitle(), e.getMessage());
     }
   }
 
   public void setBase64SrcPhoto(Photo photo) {
     final byte[] bytes;
     try {
-      bytes = Files.readAllBytes(Paths.get(photo.getFilePath()));
+      logger.info("fetching image from s3 {}", photo.getFilePath());
+      bytes = awsS3Client.getObjectAsBytes(GetObjectRequest.builder().key(photo.getFilePath().toLowerCase()).bucket("kooriim-images").build()).asByteArray();
       photo.setBase64SrcPhoto(generateBase64Image(photo, bytes));
-    } catch (IOException e) {
-      logger.error("Failed to set base64SrcPhoto with title: {}", photo.getTitle(), e.getMessage());
+    } catch (Exception e) {
+      logger.error("Failed to set base64SrcPhoto with title: {}, error: {}", photo.getTitle(), e.getMessage());
     }
   }
 
@@ -144,51 +169,116 @@ public class PhotoService {
     return "data:image/"
              + photo.getContentType()
              + ";base64,"
-             + StringUtils.newStringUtf8(Base64.encodeBase64(bytes, false));
+             + StringUtils.newStringUtf8(Base64.getEncoder().encode(bytes));
   }
 
-  private File compressAndSavePhoto(MultipartFile file, String filePath, String contentType) {
-    logger.info("Saving photo {} to imgDir {}", file.getOriginalFilename(), filePath);
+  //
+  private void compressAndSavePhoto(FilePart file, String contentType) {
+    logger.info("Saving photo {}", file.filename());
     try {
-      var image = ImageIO.read(file.getInputStream());
-      final var widthRatio =  1920f / image.getWidth();
-      final var heightRatio = 1080f / image.getHeight();
-      final var ratio = Math.min(widthRatio, heightRatio);
-      final var width = image.getWidth() * ratio;
-      final var height = image.getHeight() * ratio;
-      image = Thumbnails.of(image)
-        .size(Math.round(width), Math.round(height))
-        .asBufferedImage();
-      final var compressedImageFile = new File(filePath);
-      final var os = new FileOutputStream(compressedImageFile);
-      final var writers = ImageIO.getImageWritersByFormatName(contentType);
-      final var writer = writers.next();
-      final var ios = ImageIO.createImageOutputStream(os);
-      writer.setOutput(ios);
-      final var param = writer.getDefaultWriteParam();
-
-      param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-      param.setCompressionQuality(0.6f);  // Change the quality value you prefer
-      writer.write(null, new IIOImage(image, null, null), param);
-
-      os.close();
-      ios.close();
-      writer.dispose();
-      return compressedImageFile;
+      compress(file, contentType);
+      thumbnail(file, contentType);
     } catch (Exception e) {
-      logger.error("Failed to compressAndSavePhoto file {} with error: ", file.getOriginalFilename(), e);
-      throw new RuntimeException(e);
+      logger.error("Failed to compressAndSavePhoto file {} with error: ", file.filename(), e);
     }
   }
 
-  private void saveThumbnail(File file, String contentType) throws IOException {
-    Thumbnails.of(file)
-      .size(360, 270)
-      .outputFormat(contentType)
-      .toFiles(new File("/opt/images"), Rename.PREFIX_DOT_THUMBNAIL);
+
+  private void thumbnail(FilePart file, String contentType) {
+    file.content()
+      .doOnNext(dataBuffer -> {
+        try {
+          var image = ImageIO.read(dataBuffer.asInputStream());
+          final var widthRatio = 1920f / image.getWidth();
+          final var heightRatio = 1080f / image.getHeight();
+          final var ratio = Math.min(widthRatio, heightRatio);
+          final var width = image.getWidth() * ratio;
+          final var height = image.getHeight() * ratio;
+          image = Thumbnails.of(image)
+                    .size(Math.round(width), Math.round(height))
+                    .asBufferedImage();
+          final var byteOutputStream = new ByteArrayOutputStream();
+          ImageIO.setUseCache(false);
+          final var writers = ImageIO.getImageWritersByFormatName(contentType);
+          final var writer = writers.next();
+          final var ios = ImageIO.createImageOutputStream(byteOutputStream);
+          writer.setOutput(ios);
+          final var param = writer.getDefaultWriteParam();
+
+          param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+          param.setCompressionQuality(0.6f);  // Change the quality value you prefer
+          writer.write(null, new IIOImage(image, null, null), param);
+          final var compressedImageResult = byteOutputStream.toByteArray();
+          writer.dispose();
+          byteOutputStream.close();
+          ios.close();
+          writer.dispose();
+          logger.info("pushing thumbnail to s3");
+          final var thumbnailPath = file.filename().toLowerCase().substring(0, file.filename().lastIndexOf(".") - 1) + ".thumbnail." + contentType;
+          awsS3Client.putObject(PutObjectRequest
+                                  .builder()
+                                  .bucket("kooriim-images")
+                                  .key(thumbnailPath)
+                                  .build(), RequestBody.fromBytes(compressedImageResult));
+        } catch (Exception e) {
+
+        }
+      });
   }
 
-  public void patchPhotos(List<Photo> photos) {
-    photoRepository.saveAll(photos);
+
+  private void compress(FilePart file, String contentType) throws IOException {
+    file.content()
+      .doOnNext(dataBuffer -> {
+        try {
+          var image = ImageIO.read(dataBuffer.asInputStream());
+          final var widthRatio = 1920f / image.getWidth();
+          final var heightRatio = 1080f / image.getHeight();
+          final var ratio = Math.min(widthRatio, heightRatio);
+          final var width = image.getWidth() * ratio;
+          final var height = image.getHeight() * ratio;
+          image = Thumbnails.of(image)
+                    .size(Math.round(width), Math.round(height))
+                    .asBufferedImage();
+          final var byteOutputStream = new ByteArrayOutputStream();
+          ImageIO.setUseCache(false);
+          final var writers = ImageIO.getImageWritersByFormatName(contentType);
+          final var writer = writers.next();
+          final var ios = ImageIO.createImageOutputStream(byteOutputStream);
+          writer.setOutput(ios);
+          final var param = writer.getDefaultWriteParam();
+
+          param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+          param.setCompressionQuality(0.6f);  // Change the quality value you prefer
+          writer.write(null, new IIOImage(image, null, null), param);
+          final var compressedImageResult = byteOutputStream.toByteArray();
+          writer.dispose();
+          byteOutputStream.close();
+          ios.close();
+          writer.dispose();
+          logger.info("pushing photo to s3");
+          awsS3Client.putObject(PutObjectRequest
+                                  .builder()
+                                  .bucket("kooriim-images")
+                                  .key(file.filename().toLowerCase())
+                                  .build(), RequestBody.fromBytes(compressedImageResult));
+        } catch (Exception e) {
+
+        }
+      });
   }
+////  private void saveThumbnail(File file, ByteArrayOutputStream byteOutputStream, String contentType) throws IOException {
+////      Thumbnails.of(file)
+////      .size(360, 270)
+////      .outputFormat(contentType)
+////      .toOutputStream(byteOutputStream);
+//////    return Thumbnails.of(file)
+//////      .size(360, 270)
+//////      .outputFormat(contentType)
+//////      .toFiles(new File("/opt/images"), Rename.PREFIX_DOT_THUMBNAIL);
+////  }
+//
+//  public void patchPhotos(List<Photo> photos) {
+//    photoRepository.saveAll(photos);
+//  }
 }

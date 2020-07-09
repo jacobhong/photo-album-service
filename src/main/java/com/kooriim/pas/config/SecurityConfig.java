@@ -4,6 +4,8 @@ import com.kooriim.pas.service.GoogleUserRegistration;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.proc.JWSAlgorithmFamilyJWSKeySelector;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -12,13 +14,21 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
+import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.filter.CorsFilter;
+import reactor.core.publisher.Mono;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -26,7 +36,10 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 
 @Configuration
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+@EnableWebFluxSecurity
+public class SecurityConfig {
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
   @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
   private String jwkSetUri;
 
@@ -36,53 +49,36 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   @Autowired
   private GoogleUserRegistration googleUserRegistration;
 
-  @Override
-  protected void configure(HttpSecurity http) throws Exception {
-    if (sslRequired == true) {
-      http
-        .requiresChannel()// ssl config
-        .anyRequest()
-        .requiresSecure();
-    }
-    http
-      .authorizeRequests(authorizeRequests ->
-                           authorizeRequests
-                             .antMatchers("/actuator/*").permitAll()
-//                             .antMatchers("/public-gallery/**").permitAll()
-                             .antMatchers("/photos/**").hasAuthority("kooriim-fe")
-                             .antMatchers("/albums/**").hasAuthority("kooriim-fe")
-                             .antMatchers("/users/**").hasAuthority("kooriim-fe")
-                             .anyRequest().authenticated()
-      )
+  @Bean
+  public SecurityWebFilterChain securitygWebFilterChain(
+    ServerHttpSecurity http) throws MalformedURLException, KeySourceException {
+    http.csrf().disable();
+    http.authorizeExchange()
+      .pathMatchers("/actuator/*").permitAll()
+      .pathMatchers("/photos/**").hasAnyAuthority("kooriim-fe")
+      .pathMatchers("/albums/**").hasAnyAuthority("kooriim-fe")
+      .pathMatchers("/users/**").hasAnyAuthority("kooriim-fe")
+      .anyExchange()
+      .authenticated()
+      .and()
       .oauth2ResourceServer()
       .jwt()
-      .jwtAuthenticationConverter(grantedAuthoritiesExtractor())
-      .decoder(jwtDecoder());
+      .jwtAuthenticationConverter(grantedAuthoritiesExtractor()).jwtDecoder(jwtDecoder());
+    return http.build();
   }
 
   @Bean
-  public JwtDecoder jwtDecoder() throws MalformedURLException, KeySourceException {
-    final var jwsKeySelector =
-      JWSAlgorithmFamilyJWSKeySelector.fromJWKSetURL(new URL(this.jwkSetUri));
-
-    final var jwtProcessor =
-      new DefaultJWTProcessor<>();
-    jwtProcessor.setJWSKeySelector(jwsKeySelector);
-
-    return new NimbusJwtDecoder(jwtProcessor);
+  public ReactiveJwtDecoder jwtDecoder() throws MalformedURLException, KeySourceException {
+    return new NimbusReactiveJwtDecoder(this.jwkSetUri);
   }
 
-  public Converter<Jwt, AbstractAuthenticationToken> grantedAuthoritiesExtractor() {
-    final var jwtAuthenticationConverter = new JwtAuthenticationConverter();
-    jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter
-                                 (new GrantedAuthoritiesExtractor());
-    return jwtAuthenticationConverter;
+  public Converter<Jwt, Mono<AbstractAuthenticationToken>> grantedAuthoritiesExtractor() {
+    return new ReactiveJwtAuthenticationConverterAdapter(new GrantedAuthoritiesExtractor());
   }
 
-  public class GrantedAuthoritiesExtractor
-    implements Converter<Jwt, Collection<GrantedAuthority>> {
+  public class GrantedAuthoritiesExtractor extends JwtAuthenticationConverter {
 
-    public Collection<GrantedAuthority> convert(Jwt jwt) {
+    protected Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
       final var authorities = (Collection<String>)
                                 jwt.getClaims().get("grants");
       if (authorities.size() > 0) {

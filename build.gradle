@@ -20,13 +20,16 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
-	implementation 'org.springframework.security:spring-security-oauth2-client'
 	implementation 'org.springframework.security:spring-security-oauth2-jose'
 	implementation 'org.springframework.security:spring-security-oauth2-resource-server'
-
-	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.data:sprint-data-r2dbc:1.0.0.RELEASE'
+	implementation("dev.miku:r2dbc-mysql:0.8.1.RELEASE")
+	implementation platform('software.amazon.awssdk:bom:2.13.46')
+	implementation 'software.amazon.awssdk:s3'
+	
 	compile group: 'net.coobird', name: 'thumbnailator', version: '0.4.8'
 	compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.19'
 	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.11'
