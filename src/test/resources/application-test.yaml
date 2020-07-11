@@ -27,7 +27,7 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: true
-image-directory: /opt/images
+image-directory: /tmp/images
 management:
   security:
     enabled: false

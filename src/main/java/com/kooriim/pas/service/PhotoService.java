@@ -31,6 +31,7 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
@@ -119,7 +120,7 @@ public class PhotoService {
                final var contentType = file.filename().toLowerCase().endsWith((".png")) ? "png" : "jpg";
                final var fileName = file.filename().toLowerCase();
                final var thumbnailPath = fileName.substring(0, fileName.lastIndexOf(".") - 1) + ".thumbnail." + contentType;
-               compressAndSavePhoto(file, contentType);
+               compressImageS3Push(file, contentType);
                return photoRepository.save(Photo.newInstance(file, fileName, thumbnailPath, contentType, name));
              });
 
@@ -172,113 +173,61 @@ public class PhotoService {
              + StringUtils.newStringUtf8(Base64.getEncoder().encode(bytes));
   }
 
-  //
-  private void compressAndSavePhoto(FilePart file, String contentType) {
-    logger.info("Saving photo {}", file.filename());
+  private void compressImageS3Push(FilePart file, String contentType) {
     try {
-      compress(file, contentType);
-      thumbnail(file, contentType);
-    } catch (Exception e) {
-      logger.error("Failed to compressAndSavePhoto file {} with error: ", file.filename(), e);
-    }
-  }
+      var temp = File.createTempFile(file.filename(), contentType, new File(imgDir + "/"));
+      file.transferTo(temp);
+      var image = ImageIO.read(temp);
+      final byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
+      final byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
+      logger.info("pushing thumbnail to s3");
+      final var thumbnailPath = file.filename().toLowerCase().substring(0, file.filename().lastIndexOf(".") - 1) + ".thumbnail." + contentType;
+      awsS3Client.putObject(PutObjectRequest
+                              .builder()
+                              .bucket("kooriim-images")
+                              .key(file.filename().toLowerCase())
+                              .build(), RequestBody.fromBytes(compressedImageResult));
 
-
-  private void thumbnail(FilePart file, String contentType) {
-    file.content()
-      .doOnNext(dataBuffer -> {
-        try {
-          var image = ImageIO.read(dataBuffer.asInputStream());
-          final var widthRatio = 1920f / image.getWidth();
-          final var heightRatio = 1080f / image.getHeight();
-          final var ratio = Math.min(widthRatio, heightRatio);
-          final var width = image.getWidth() * ratio;
-          final var height = image.getHeight() * ratio;
-          image = Thumbnails.of(image)
-                    .size(Math.round(width), Math.round(height))
-                    .asBufferedImage();
-          final var byteOutputStream = new ByteArrayOutputStream();
-          ImageIO.setUseCache(false);
-          final var writers = ImageIO.getImageWritersByFormatName(contentType);
-          final var writer = writers.next();
-          final var ios = ImageIO.createImageOutputStream(byteOutputStream);
-          writer.setOutput(ios);
-          final var param = writer.getDefaultWriteParam();
-
-          param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-          param.setCompressionQuality(0.6f);  // Change the quality value you prefer
-          writer.write(null, new IIOImage(image, null, null), param);
-          final var compressedImageResult = byteOutputStream.toByteArray();
-          writer.dispose();
-          byteOutputStream.close();
-          ios.close();
-          writer.dispose();
-          logger.info("pushing thumbnail to s3");
-          final var thumbnailPath = file.filename().toLowerCase().substring(0, file.filename().lastIndexOf(".") - 1) + ".thumbnail." + contentType;
-          awsS3Client.putObject(PutObjectRequest
-                                  .builder()
-                                  .bucket("kooriim-images")
-                                  .key(thumbnailPath)
-                                  .build(), RequestBody.fromBytes(compressedImageResult));
-        } catch (Exception e) {
-
-        }
-      });
-  }
-
-
-  private void compress(FilePart file, String contentType) throws IOException {
-    file.content()
-      .doOnNext(dataBuffer -> {
-        try {
-          var image = ImageIO.read(dataBuffer.asInputStream());
-          final var widthRatio = 1920f / image.getWidth();
-          final var heightRatio = 1080f / image.getHeight();
-          final var ratio = Math.min(widthRatio, heightRatio);
-          final var width = image.getWidth() * ratio;
-          final var height = image.getHeight() * ratio;
-          image = Thumbnails.of(image)
-                    .size(Math.round(width), Math.round(height))
-                    .asBufferedImage();
-          final var byteOutputStream = new ByteArrayOutputStream();
-          ImageIO.setUseCache(false);
-          final var writers = ImageIO.getImageWritersByFormatName(contentType);
-          final var writer = writers.next();
-          final var ios = ImageIO.createImageOutputStream(byteOutputStream);
-          writer.setOutput(ios);
-          final var param = writer.getDefaultWriteParam();
-
-          param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-          param.setCompressionQuality(0.6f);  // Change the quality value you prefer
-          writer.write(null, new IIOImage(image, null, null), param);
-          final var compressedImageResult = byteOutputStream.toByteArray();
-          writer.dispose();
-          byteOutputStream.close();
-          ios.close();
-          writer.dispose();
           logger.info("pushing photo to s3");
           awsS3Client.putObject(PutObjectRequest
                                   .builder()
                                   .bucket("kooriim-images")
-                                  .key(file.filename().toLowerCase())
-                                  .build(), RequestBody.fromBytes(compressedImageResult));
-        } catch (Exception e) {
-
-        }
-      });
+                                  .key(thumbnailPath)
+                                  .build(), RequestBody.fromBytes(compressedThumbnailResult));
+      temp.delete();
+    } catch (Exception e) {
+    }
   }
-////  private void saveThumbnail(File file, ByteArrayOutputStream byteOutputStream, String contentType) throws IOException {
-////      Thumbnails.of(file)
-////      .size(360, 270)
-////      .outputFormat(contentType)
-////      .toOutputStream(byteOutputStream);
-//////    return Thumbnails.of(file)
-//////      .size(360, 270)
-//////      .outputFormat(contentType)
-//////      .toFiles(new File("/opt/images"), Rename.PREFIX_DOT_THUMBNAIL);
-////  }
-//
-//  public void patchPhotos(List<Photo> photos) {
-//    photoRepository.saveAll(photos);
-//  }
+
+  private byte[] compressPhoto(String contentType, BufferedImage image, float aspectWidth, float aspectHeight) throws IOException {
+    final var widthRatio = aspectWidth / image.getWidth();
+    final var heightRatio = aspectHeight / image.getHeight();
+    final var ratio = Math.min(widthRatio, heightRatio);
+    final var width = image.getWidth() * ratio;
+    final var height = image.getHeight() * ratio;
+    image = Thumbnails.of(image)
+              .size(Math.round(width), Math.round(height))
+              .asBufferedImage();
+    final var byteOutputStream = new ByteArrayOutputStream();
+    ImageIO.setUseCache(false);
+    final var writers = ImageIO.getImageWritersByFormatName(contentType);
+    final var writer = writers.next();
+    final var ios = ImageIO.createImageOutputStream(byteOutputStream);
+    writer.setOutput(ios);
+    final var param = writer.getDefaultWriteParam();
+
+    param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+    param.setCompressionQuality(0.6f);  // Change the quality value you prefer
+    writer.write(null, new IIOImage(image, null, null), param);
+    final var compressedImageResult = byteOutputStream.toByteArray();
+    writer.dispose();
+    byteOutputStream.close();
+    ios.close();
+    writer.dispose();
+    return compressedImageResult;
+  }
+
+  public void patchPhotos(List<Photo> photos) {
+    photos.forEach(photo -> photoRepository.save(photo));
+  }
 }

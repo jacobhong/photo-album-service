@@ -41,7 +41,7 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: true
-image-directory: /opt/images
+image-directory: /tmp/images
 keycloak:
   realm: kooriim-fe
   resource: kooriim-fe

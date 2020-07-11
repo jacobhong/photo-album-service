@@ -3,6 +3,7 @@ package com.kooriim.pas.repository;
 import com.kooriim.pas.domain.Photo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -17,6 +18,7 @@ import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceContext;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +31,9 @@ public class PhotoRepository {
 
   @PersistenceContext
   private EntityManager entityManager;
+
+  @Autowired
+  private EntityManagerFactory entityManagerFactory;
 
   public Mono<List<Photo>> getPhotosByAlbumId(Integer id, Pageable pageable) {
     return Mono
@@ -81,13 +86,17 @@ public class PhotoRepository {
       .subscribeOn(Schedulers.elastic());
   }
 
-  @Transactional
+//  @Transactional
   public Mono<Photo> save(Photo photo) {
-    logger.info("deleting by ids");
-    entityManager.persist(photo);
-    return Mono.fromCallable(() -> entityManager.merge(photo))
-             .map(p -> p)
-             .subscribeOn(Schedulers.elastic());
+    logger.info("saving");
+    return Mono.fromCallable(() -> {
+      var em = entityManagerFactory.createEntityManager();
+      var trans = em.getTransaction();
+      trans.begin();
+      final var result = em.merge(photo);
+      trans.commit();
+      return result;
+    }).subscribeOn(Schedulers.elastic());
   }
 }
 

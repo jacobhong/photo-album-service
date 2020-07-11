@@ -9,7 +9,7 @@ services:
     networks:
       - auth-network
     volumes:
-      - ./docker/images:/opt/images
+      - ./docker/images:/tmp/images
   mariadb:
     image: mariadb:10.4
     restart: always
