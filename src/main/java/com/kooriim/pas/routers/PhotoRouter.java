@@ -1,6 +1,7 @@
 package com.kooriim.pas.routers;
 
 import com.kooriim.pas.controller.PublicGalleryController;
+import com.kooriim.pas.handler.AlbumHandler;
 import com.kooriim.pas.handler.PhotoHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +25,9 @@ public class PhotoRouter {
     return nest(path("/photo-album-service"),
       RouterFunctions.route(GET("/photos/{id}").and(ACCEPTS_JSON), photoHandler::getPhotoById)
         .andRoute(GET("/photos").and(ACCEPTS_JSON), photoHandler::getPhotos)
+        .andRoute(PATCH("/photos").and(CONTENT_TYPE_JSON), photoHandler::patchPhotos)
+        .andRoute(DELETE("/photos/{id}").and(ACCEPTS_JSON), photoHandler::deletePhoto)
+        .andRoute(DELETE("/photos").and(ACCEPTS_JSON), photoHandler::deletePhotos)
         .andRoute(POST("/photos").and(ACCEPTS_JSON).and(RequestPredicates.contentType(MediaType.MULTIPART_FORM_DATA)), photoHandler::create));
 
 //          .andRoute(POST("/orders").and(CONTENT_TYPE_JSON), orderHandler::createOrderHandler)
@@ -37,6 +41,16 @@ public class PhotoRouter {
     return RouterFunctions.route(GET("/person/").and(ACCEPTS_JSON), publicGalleryController::getPhotos);
 //          .andRoute(POST("/orders").and(CONTENT_TYPE_JSON), orderHandler::createOrderHandler)
 //          .andRoute(PATCH("/orders/{id}").and(CONTENT_TYPE_JSON), orderHandler::patchOrder)
+//          .andRoute(PATCH("/orders").and(CONTENT_TYPE_JSON), orderHandler::patchOrders)
+//          .andRoute(DELETE("/orders/{id}"), orderHandler::deleteOrder)).filter(this::checkCommonRequiredHeaders);
+  }
+
+  @Bean
+  public RouterFunction<ServerResponse> route3(AlbumHandler albumHandler) {
+    return nest(path("/photo-album-service"),
+      RouterFunctions.route(GET("/albums").and(ACCEPTS_JSON), albumHandler::getAlbums)
+        .andRoute(POST("/albums").and(CONTENT_TYPE_JSON), albumHandler::create)
+        .andRoute(PATCH("/albums/{id}").and(CONTENT_TYPE_JSON), albumHandler::addPhotosToAlbum));
 //          .andRoute(PATCH("/orders").and(CONTENT_TYPE_JSON), orderHandler::patchOrders)
 //          .andRoute(DELETE("/orders/{id}"), orderHandler::deleteOrder)).filter(this::checkCommonRequiredHeaders);
   }

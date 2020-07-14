@@ -5,22 +5,17 @@ import com.kooriim.pas.service.PhotoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 
-import java.security.Principal;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PhotoHandler {
@@ -35,15 +30,12 @@ public class PhotoHandler {
     final var size = serverRequest.queryParam("size");
     final var queryParams = serverRequest.queryParams();
     return photoService.getPhotosByQueryParams(queryParams, PageRequest.of(Integer.valueOf(page.get()), Integer.valueOf(size.get())))
+             .collectList()
              .flatMap(photos -> ServerResponse.ok().bodyValue(photos));
   }
 
   public Mono<ServerResponse> getPhotoById(ServerRequest serverRequest) {
     logger.info("getting photo by id: {}", serverRequest.pathVariable("id"));
-    serverRequest.principal().map(Principal::getName).flatMap(p -> {
-      logger.info("hifewhfiehwfiewhfiew " + p);
-      return Mono.just(p);
-    }).subscribe();
     return photoService
              .getPhotoById(Integer.valueOf(serverRequest.pathVariable("id")), Boolean.TRUE)
              .flatMap(p -> ServerResponse.ok().bodyValue(p))
@@ -53,27 +45,27 @@ public class PhotoHandler {
   public Mono<ServerResponse> deletePhoto(ServerRequest serverRequest) {
     final var id = Integer.valueOf(serverRequest.pathVariable("id"));
     logger.info("deleting photo id: {}", id);
-    photoService.deletePhotos(new ArrayList<>() {{
-      add(id);
-    }});
-    return ServerResponse.ok().build();
+    return photoService.deletePhotos(Arrays.asList(id)).flatMap(v -> ServerResponse.ok().build());
   }
 
-  //
-  public Mono<ServerResponse> deletePhotos(@RequestParam("photoIds") List<Integer> ids) {
+  public Mono<ServerResponse> deletePhotos(ServerRequest serverRequest) {
+    final var ids = (String) serverRequest.queryParam("photoIds").get();
     logger.info("deleting photo id: {}", ids);
-    photoService.deletePhotos(ids);
-    return ServerResponse.ok().build();
+    return photoService.deletePhotos(Arrays.asList(ids.split(","))
+                                       .stream()
+                                       .map(Integer::valueOf)
+                                       .collect(Collectors.toList())).flatMap(v -> ServerResponse.ok().build());
   }
-//
-  @RequestMapping(value = "", method = RequestMethod.PATCH)
-  public ResponseEntity<Void> patchPhotos(@RequestBody List<Photo> photos) {
+
+  public Mono<ServerResponse> patchPhotos(ServerRequest serverRequest) {
+    final var photos = serverRequest.bodyToMono(new ParameterizedTypeReference<List<Photo>>() {
+    });
     logger.info("patching photos: {}", photos);
-    photoService.patchPhotos(photos);
-    return new ResponseEntity(HttpStatus.OK);
+    return photoService.patchPhotos(photos).flatMap(v -> ServerResponse.ok().build());
   }
-//
+
   public Mono<ServerResponse> create(ServerRequest serverRequest) {
+    logger.info("creating photo");
     return serverRequest
              .multipartData()
              .map(data -> data.toSingleValueMap().get("file")).cast(FilePart.class)

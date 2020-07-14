@@ -5,25 +5,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.PagingAndSortingRepository;
-import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceContext;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Repository
 public class PhotoRepository {
@@ -35,68 +25,95 @@ public class PhotoRepository {
   @Autowired
   private EntityManagerFactory entityManagerFactory;
 
-  public Mono<List<Photo>> getPhotosByAlbumId(Integer id, Pageable pageable) {
-    return Mono
-             .fromCallable(() -> entityManager
-                                   .createNativeQuery("SELECT * FROM photo p INNER JOIN photo_album pa ON p.id=pa.photo_id WHERE pa.album_id=?", Photo.class)
-                                   .setParameter("id", id)
-                                   .setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
-                                   .setMaxResults(pageable.getPageSize()).getResultList()).map(photos -> (List<Photo>) photos)
-             .subscribeOn(Schedulers.elastic());
-  }
-
   public Mono<Photo> getPhotoById(Integer id) {
-    logger.info("getting photo");
-    return Mono.fromCallable(() -> (Photo) entityManager.createNativeQuery("SELECT * FROM photo where id = :id", Photo.class)
-                                             .setParameter("id", id)
-                                             .getSingleResult())
-             .subscribeOn(Schedulers.elastic())
+    return Mono.fromCallable(() -> entityManager.createNativeQuery("SELECT * FROM photo where id = :id", Photo.class)
+                                     .setParameter("id", id)
+                                     .getSingleResult())
+             .cast(Photo.class)
+             .doOnNext(photo -> logger.info("Got photo {}", photo.getTitle()))
+             .doOnError(error -> logger.error("Error getting photo {}", error.getMessage()))
              .onErrorResume(e -> Mono.empty())
-             .doOnNext(p -> logger.info("got pppp"))
              .subscribeOn(Schedulers.elastic());
   }
 
-  public Mono<List<Photo>> getPhotosByGoogleId(String googleId, Pageable pageable) {
-    logger.info("getting photo");
-    return Mono.fromCallable(() -> entityManager
-                                     .createNativeQuery("SELECT * FROM photo WHERE google_id=:google_id", Photo.class)
-                                     .setParameter("google_id", googleId)
-                                     .setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
-                                     .setMaxResults(pageable.getPageSize()).getResultList()).map(photos -> (List<Photo>) photos)
-             .doOnNext(photos -> logger.info("fetched photos: {}", photos))
+  public Flux<Photo> getPhotosByAlbumId(Integer albumId, Pageable pageable) {
+    return Flux.defer(() -> Flux.fromIterable(entityManager
+                                                .createNativeQuery("SELECT * FROM photo p INNER JOIN photo_album pa ON p.id=pa.photo_id WHERE pa.album_id=:id", Photo.class)
+                                                .setParameter("id", albumId)
+                                                .setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
+                                                .setMaxResults(pageable.getPageSize()).getResultList()))
+             .doOnNext(result -> logger.info("Got photos by albumId {}", albumId))
+             .doOnError(error -> logger.error("Error getting photos by albumId {}", ((Throwable)error).getMessage()))
              .subscribeOn(Schedulers.elastic());
   }
 
-  public Mono<List<Photo>> getByIds(List<Integer> ids) {
-    logger.info("getting photo");
-    return Mono.fromCallable(() -> entityManager
-                                     .createNativeQuery("SELECT * FROM photo WHERE id in (:ids)", Photo.class)
-                                     .setParameter("id", ids)
-                                     .getResultList())
-             .map(photo -> (List<Photo>) photo)
+  public Flux<Photo> getPhotosByGoogleId(String googleId, Pageable pageable) {
+    return Flux.defer(() -> Flux.fromIterable(entityManager
+                                                .createNativeQuery("SELECT * FROM photo WHERE google_id=:google_id", Photo.class)
+                                                .setParameter("google_id", googleId)
+                                                .setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
+                                                .setMaxResults(pageable.getPageSize()).getResultList()))
+             .doOnNext(result -> logger.info("Got photos by googleId {}", googleId))
+             .doOnError(error -> logger.error("Error getting photos by googleId {}", ((Throwable)error).getMessage()))
              .subscribeOn(Schedulers.elastic());
   }
 
-  public void deleteByIds(List<Integer> ids) {
-    logger.info("deleting by ids");
-    Mono.fromCallable(() -> entityManager
-                              .createNativeQuery("DELETE p, a FROM album a JOIN photo p ON p.id = a.id WHERE p.id in (:ids)")
-                              .setParameter("id", ids)
-                              .executeUpdate())
-      .subscribeOn(Schedulers.elastic());
+  public Flux<Photo> getPhotosByIds(List<Integer> ids) {
+    return Flux.defer(() -> Flux.fromIterable(entityManager
+                                                .createNativeQuery("SELECT * FROM photo WHERE id in (:ids)", Photo.class)
+                                                .setParameter("ids", ids)
+                                                .getResultList()))
+             .doOnNext(result -> logger.info("Got photoById {}", ids.toString()))
+             .doOnError(error -> logger.error("Error getting photosById {}", ((Throwable)error).getMessage()))
+             .subscribeOn(Schedulers.elastic());
   }
 
-//  @Transactional
+  public Mono<Void> deleteByPhotoIds(List<Integer> ids) {
+    return Mono.fromCallable(() -> {
+      var em = entityManagerFactory.createEntityManager();
+      var trans = em.getTransaction();
+      trans.begin();
+      final var result = em.createNativeQuery("DELETE photo_album, photo FROM photo_album JOIN photo ON photo_album.photo_id=photo.id WHERE photo.id in (:ids)")
+                           .setParameter("ids", ids)
+                           .executeUpdate();
+      trans.commit();
+      em.close();
+      return result;
+    }).doOnNext(result -> logger.info("Deleted photosById {}", ids.toString()))
+             .doOnError(error -> logger.error("Error getting photosByIds {}", error.getMessage()))
+             .then()
+             .subscribeOn(Schedulers.elastic());
+  }
+
+  public Mono<Integer> deleteAllPhotosByAlbumId(Integer albumId) {
+    return Mono.fromCallable(() -> {
+      var em = entityManagerFactory.createEntityManager();
+      var trans = em.getTransaction();
+      trans.begin();
+      final var result = em.createNativeQuery("DELETE FROM photo_album where album_id = :id")
+                           .setParameter("id", albumId)
+                           .executeUpdate();
+      trans.commit();
+      em.close();
+      return result;
+    }).doOnNext(result -> logger.info("Deleted all photos by albumId {}", albumId))
+             .doOnError(error -> logger.error("Error deleting photos {} ", error.getMessage()))
+             .subscribeOn(Schedulers.elastic());
+  }
+
+
   public Mono<Photo> save(Photo photo) {
-    logger.info("saving");
     return Mono.fromCallable(() -> {
       var em = entityManagerFactory.createEntityManager();
       var trans = em.getTransaction();
       trans.begin();
       final var result = em.merge(photo);
       trans.commit();
+      em.close();
       return result;
-    }).subscribeOn(Schedulers.elastic());
+    }).doOnNext(result -> logger.info("Saved photo {}", result.getTitle()))
+             .doOnError(error -> logger.error("Error saving photo {}", error.getMessage()))
+             .subscribeOn(Schedulers.elastic());
   }
 }
 

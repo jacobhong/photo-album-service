@@ -15,10 +15,8 @@ import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -36,6 +34,7 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,152 +50,134 @@ public class PhotoService {
 //  @Autowired
 //  private AlbumRepository albumRepository;
 
-  @Autowired()
+  @Autowired
   @Qualifier("awsS3Client")
   private S3Client awsS3Client;
 
 
   public Mono<Photo> getPhotoById(Integer photoId, Boolean setSrcImage) {
-    logger.info("getting photo for googleId {}", ReactiveSecurityContextHolder
-                                                   .getContext()
-                                                   .map(SecurityContext::getAuthentication)
-                                                   .map(Authentication::getName));
-    return photoRepository.getPhotoById(photoId).map(photo -> {
-      if (setSrcImage == true) {
-        setBase64SrcPhoto(photo);
-        logger.info("found photoId {}", photo.getId());
-      }
-      return photo;
-    }).doOnNext(p -> logger.info("got p"));
-  }
-
-  public Mono<List<Photo>> getPhotosByQueryParams(MultiValueMap<String, String> params, Pageable pageable) {
-    return ReactiveSecurityContextHolder
-             .getContext()
-             .publishOn(Schedulers.elastic())
-             .map(SecurityContext::getAuthentication)
-             .map(Authentication::getName)
-             .doOnNext(name -> logger.info("getting photo for googleId {}", name))
-             .flatMap(name -> {
-               if (params.containsKey("albumId")) {
-                 logger.info("Fetching photos by albumID");
-                 return photoRepository
-                          .getPhotosByAlbumId(Integer.valueOf(params.toSingleValueMap().get("albumId")), pageable)
-                          .map(photos -> {
-                            photos.forEach(photo -> setBase64Photo(params.toSingleValueMap(), photo));
-                            return photos;
-                          }).doOnNext(photos -> logger.info("fetched photos: {}", photos));
-               } else {
-                 logger.info("Fetching photos by googleID");
-                 return photoRepository
-                          .getPhotosByGoogleId(name, pageable)
-                          .map(photos -> {
-                            photos.forEach(photo -> setBase64Photo(params.toSingleValueMap(), photo));
-                            return photos;
-                          }).doOnNext(photos -> logger.info("fetched photos: {}", photos));
+    return photoRepository.getPhotoById(photoId)
+             .flatMap(photo -> {
+               if (setSrcImage == true) {
+                 return setBase64SrcPhoto(photo);
                }
+               return Mono.just(photo);
              });
-
   }
 
-  private Publisher<? extends Photo> setBase64Photo(Map<String, String> params, Photo photo) {
-    if (params.containsKey("thumbnail") && params.get("thumbnail").equalsIgnoreCase("true")) {
-      setBase64Thumbnail(photo);
-    }
-    if (params.containsKey("srcImage") && params.get("srcImage").equalsIgnoreCase("true")) {
-      setBase64SrcPhoto(photo);
-    }
-    return Flux.just(photo);
+  public Flux<Photo> getPhotosByQueryParams(MultiValueMap<String, String> params, Pageable pageable) {
+    return getUserGoogleId()
+             .flatMapMany(name -> getPhotosSetBase64(params, pageable, name));
   }
 
   public Mono<Photo> savePhoto(FilePart file) {
-    return ReactiveSecurityContextHolder
-             .getContext()
-             .publishOn(Schedulers.elastic())
-             .map(SecurityContext::getAuthentication)
-             .map(Authentication::getName)
-             .doOnNext(name -> logger.info("getting photo for googleId {}", name))
-             .flatMap(name -> {
-               final var contentType = file.filename().toLowerCase().endsWith((".png")) ? "png" : "jpg";
-               final var fileName = file.filename().toLowerCase();
-               final var thumbnailPath = fileName.substring(0, fileName.lastIndexOf(".") - 1) + ".thumbnail." + contentType;
-               compressImageS3Push(file, contentType);
-               return photoRepository.save(Photo.newInstance(file, fileName, thumbnailPath, contentType, name));
-             });
-
+    return getUserGoogleId()
+             .flatMap(compressAndSaveImage(file));
   }
 
-  public void deletePhotos(List<Integer> ids) {
-    photoRepository.getByIds(ids)
-      .doOnNext(photos -> photoRepository.deleteByIds(ids))
-      .doOnNext(photos -> {
-        var deletePhotos = photos
-                             .stream()
-                             .map(photo -> ObjectIdentifier.builder().key(photo.getFilePath()).build()).collect(Collectors.toList());
-        var deleteThumbnails = photos
-                                 .stream()
-                                 .map(photo -> ObjectIdentifier.builder().key(photo.getThumbnailFilePath()).build()).collect(Collectors.toList());
-        deletePhotos.addAll(deleteThumbnails);
-        photos.forEach(photo -> awsS3Client.deleteObjects(DeleteObjectsRequest
-                                                            .builder()
-                                                            .delete(Delete.builder().objects(deletePhotos).build())
-                                                            .build()));
-      });
+  public Mono<Void> deletePhotos(List<Integer> ids) {
+    return photoRepository.getPhotosByIds(ids)
+             .collectList()
+             .flatMap(photos -> {
+               var deletePhotos = photos
+                                    .stream()
+                                    .map(photo -> ObjectIdentifier.builder()
+                                                    .key(photo.getFilePath())
+                                                    .build())
+                                    .collect(Collectors.toList());
+               var deleteThumbnails = photos
+                                        .stream()
+                                        .map(photo -> ObjectIdentifier.builder()
+                                                        .key(photo.getThumbnailFilePath())
+                                                        .build())
+                                        .collect(Collectors.toList());
+               deletePhotos.addAll(deleteThumbnails);
+               awsS3Client.deleteObjects(DeleteObjectsRequest
+                                           .builder()
+                                           .delete(Delete.builder().objects(deletePhotos).build())
+                                           .bucket("kooriim-images")
+                                           .build());
+               return photoRepository.deleteByPhotoIds(ids).then();
+             }).doOnNext(result -> logger.info("Deleted photos from s3"))
+             .then();
   }
 
-  public void setBase64Thumbnail(Photo photo) {
-    final byte[] bytes;
-    try {
-      logger.info("fetching image from s3 {}", photo.getThumbnailFilePath());
-      bytes = awsS3Client.getObjectAsBytes(GetObjectRequest.builder().key(photo.getThumbnailFilePath().toLowerCase()).bucket("kooriim-images").build()).asByteArray();
+  public Mono<Photo> setBase64Thumbnail(Photo photo) {
+    return Mono.fromCallable(() -> {
+      final byte[] bytes;
+      bytes = awsS3Client.getObjectAsBytes(GetObjectRequest
+                                             .builder()
+                                             .key(photo
+                                                    .getThumbnailFilePath()
+                                                    .toLowerCase())
+                                             .bucket("kooriim-images")
+                                             .build())
+                .asByteArray();
+      photo.setBase64ThumbnailPhoto(generateBase64Image(photo, bytes));
+      return photo;
+    }).doOnNext(result -> logger.info("fetched image from s3 {}", result.getThumbnailFilePath()))
+             .doOnError(error -> logger.error("Error setting base64 thumbnail {} for photoId {}", error.getMessage(), photo.getId()))
+             .subscribeOn(Schedulers.elastic());
+  }
+
+  public Mono<Photo> setBase64SrcPhoto(Photo photo) {
+    return Mono.fromCallable(() -> {
+      final byte[] bytes;
+      bytes = awsS3Client.getObjectAsBytes(GetObjectRequest
+                                             .builder()
+                                             .key(photo
+                                                    .getFilePath()
+                                                    .toLowerCase())
+                                             .bucket("kooriim-images")
+                                             .build())
+                .asByteArray();
       photo.setBase64SrcPhoto(generateBase64Image(photo, bytes));
-    } catch (Exception e) {
-      logger.error("Failed to set base64SrcPhoto with title: {}, error: {}", photo.getTitle(), e.getMessage());
+      return photo;
+    }).doOnNext(result -> logger.info("fetched image from s3 {}", result.getFilePath()))
+             .doOnError(error -> logger.error("Error setting base64 thumbnail {} for photoId {}", error.getMessage(), photo.getId()))
+             .subscribeOn(Schedulers.elastic());
+  }
+
+  public Mono<Void> patchPhotos(Mono<List<Photo>> photos) {
+    return photos.doOnNext(p -> p.forEach(photo -> photoRepository.save(photo))).then();
+  }
+
+  private Publisher<? extends Photo> getPhotosSetBase64(MultiValueMap<String, String> params, Pageable pageable, String name) {
+    if (params.containsKey("albumId")) {
+      return photoRepository
+               .getPhotosByAlbumId(Integer.valueOf(params.toSingleValueMap().get("albumId")), pageable)
+               .flatMap(photo -> setBase64Photo(params.toSingleValueMap(), photo))
+               .doOnNext(photos -> logger.info("getPhotosSetBase64 by albumId: {}", photos.getTitle()));
+    } else {
+      return photoRepository
+               .getPhotosByGoogleId(name, pageable)
+               .flatMap(photo -> setBase64Photo(params.toSingleValueMap(), photo))
+               .doOnNext(photos -> logger.info("getPhotosSetBase64 by googleId: {}", photos.getTitle()));
     }
   }
 
-  public void setBase64SrcPhoto(Photo photo) {
-    final byte[] bytes;
-    try {
-      logger.info("fetching image from s3 {}", photo.getFilePath());
-      bytes = awsS3Client.getObjectAsBytes(GetObjectRequest.builder().key(photo.getFilePath().toLowerCase()).bucket("kooriim-images").build()).asByteArray();
-      photo.setBase64SrcPhoto(generateBase64Image(photo, bytes));
-    } catch (Exception e) {
-      logger.error("Failed to set base64SrcPhoto with title: {}, error: {}", photo.getTitle(), e.getMessage());
+  private Mono<Photo> setBase64Photo(Map<String, String> params, Photo photo) {
+    if (params.containsKey("thumbnail") && params.get("thumbnail").equalsIgnoreCase("true")) {
+      return setBase64Thumbnail(photo);
     }
+    if (params.containsKey("srcImage") && params.get("srcImage").equalsIgnoreCase("true")) {
+      return setBase64SrcPhoto(photo);
+    }
+    return Mono.just(photo);
   }
 
-  private String generateBase64Image(Photo photo, byte[] bytes) {
-    return "data:image/"
-             + photo.getContentType()
-             + ";base64,"
-             + StringUtils.newStringUtf8(Base64.getEncoder().encode(bytes));
-  }
-
-  private void compressImageS3Push(FilePart file, String contentType) {
-    try {
-      var temp = File.createTempFile(file.filename(), contentType, new File(imgDir + "/"));
-      file.transferTo(temp);
-      var image = ImageIO.read(temp);
-      final byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
-      final byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
-      logger.info("pushing thumbnail to s3");
-      final var thumbnailPath = file.filename().toLowerCase().substring(0, file.filename().lastIndexOf(".") - 1) + ".thumbnail." + contentType;
-      awsS3Client.putObject(PutObjectRequest
-                              .builder()
-                              .bucket("kooriim-images")
-                              .key(file.filename().toLowerCase())
-                              .build(), RequestBody.fromBytes(compressedImageResult));
-
-          logger.info("pushing photo to s3");
-          awsS3Client.putObject(PutObjectRequest
-                                  .builder()
-                                  .bucket("kooriim-images")
-                                  .key(thumbnailPath)
-                                  .build(), RequestBody.fromBytes(compressedThumbnailResult));
-      temp.delete();
-    } catch (Exception e) {
-    }
+  private Function<String, Mono<? extends Photo>> compressAndSaveImage(FilePart file) {
+    return name -> {
+      final var contentType = file.filename()
+                                .toLowerCase()
+                                .endsWith((".png")) ? "png" : "jpg";
+      final var fileName = file.filename()
+                             .toLowerCase();
+      final var thumbnailPath = fileName.substring(0, fileName.lastIndexOf(".")) + ".thumbnail." + contentType;
+      return compressImageS3Push(file, contentType)
+               .flatMap(image -> photoRepository
+                                   .save(Photo.newInstance(file, fileName, thumbnailPath, contentType, name)));
+    };
   }
 
   private byte[] compressPhoto(String contentType, BufferedImage image, float aspectWidth, float aspectHeight) throws IOException {
@@ -227,7 +208,51 @@ public class PhotoService {
     return compressedImageResult;
   }
 
-  public void patchPhotos(List<Photo> photos) {
-    photos.forEach(photo -> photoRepository.save(photo));
+  private String generateBase64Image(Photo photo, byte[] bytes) {
+    return "data:image/"
+             + photo.getContentType()
+             + ";base64,"
+             + StringUtils.newStringUtf8(Base64.getEncoder().encode(bytes));
+  }
+
+  private Mono<byte[]> compressImageS3Push(FilePart file, String contentType) {
+    return Mono.fromCallable(() -> {
+      final var tmpDir = new File(imgDir);
+      if (!tmpDir.exists()) {
+        tmpDir.mkdir();
+      }
+      var tempFile = File.createTempFile(file.filename(), contentType, new File(imgDir + "/"));
+      file.transferTo(tempFile);
+      var image = ImageIO.read(tempFile);
+      final byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
+      final byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
+      logger.info("pushing thumbnail to s3");
+      final var thumbnailPath = file.filename().toLowerCase().substring(0, file.filename().lastIndexOf(".")) + ".thumbnail." + contentType;
+      awsS3Client.putObject(PutObjectRequest
+                              .builder()
+                              .bucket("kooriim-images")
+                              .key(file.filename().toLowerCase())
+                              .build(), RequestBody.fromBytes(compressedImageResult));
+
+      logger.info("pushing photo to s3");
+      awsS3Client.putObject(PutObjectRequest
+                              .builder()
+                              .bucket("kooriim-images")
+                              .key(thumbnailPath)
+                              .build(), RequestBody.fromBytes(compressedThumbnailResult));
+      tempFile.delete();
+      return compressedImageResult;
+    }).doOnSuccess(result -> logger.info("Compressed and pushed image to s3"))
+             .doOnError(error -> logger.error("Failed compressImageS3Push {}", error.getMessage()))
+             .subscribeOn(Schedulers.elastic());
+  }
+
+  private Mono<String> getUserGoogleId() {
+    return ReactiveSecurityContextHolder
+             .getContext()
+             .publishOn(Schedulers.elastic())
+             .map(SecurityContext::getAuthentication)
+             .map(Authentication::getName)
+             .doOnNext(name -> logger.info("getting photo for googleId {}", name));
   }
 }
