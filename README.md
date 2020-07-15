@@ -36,6 +36,7 @@ openssl pkcs12 -in keycloak.p12 -nokeys -out tls.crt
 openssl pkcs12 -in keycloak.p12 -nocerts -nodes -out tls.key
 ```
 
+#certbot renew
 import existing crt into existing keystore
 
 ```$xslt
@@ -59,4 +60,4 @@ create new role: kooriim-fe
 -in roles - default roles - add koorim-fe
 ```
 
-
+(when update cert do it on aws then commit to git the new keys then recreate keystore in intellij)

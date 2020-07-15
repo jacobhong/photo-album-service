@@ -2,8 +2,6 @@ package com.kooriim.pas.config;
 
 import com.kooriim.pas.service.GoogleUserRegistration;
 import com.nimbusds.jose.KeySourceException;
-import com.nimbusds.jose.proc.JWSAlgorithmFamilyJWSKeySelector;
-import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,31 +10,30 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import reactor.core.publisher.Mono;
 
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebFluxSecurity
+@EnableReactiveMethodSecurity
 public class SecurityConfig {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -50,8 +47,21 @@ public class SecurityConfig {
   private GoogleUserRegistration googleUserRegistration;
 
   @Bean
+  public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration corsConfig = new CorsConfiguration();
+    corsConfig.applyPermitDefaultValues();
+    corsConfig.addAllowedMethod("OPTIONS");
+    corsConfig.setAllowedOrigins(Arrays.asList("https://now.kooriim.com"));
+    UrlBasedCorsConfigurationSource source =
+      new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", corsConfig);
+    return source;
+  }
+
+  @Bean
   public SecurityWebFilterChain securitygWebFilterChain(
     ServerHttpSecurity http) throws MalformedURLException, KeySourceException {
+    http.cors().configurationSource(corsConfigurationSource());
     http.csrf().disable();
     http.authorizeExchange()
       .pathMatchers("/actuator/*").permitAll()
@@ -68,7 +78,7 @@ public class SecurityConfig {
   }
 
   @Bean
-  public ReactiveJwtDecoder jwtDecoder() throws MalformedURLException, KeySourceException {
+  public ReactiveJwtDecoder jwtDecoder() {
     return new NimbusReactiveJwtDecoder(this.jwkSetUri);
   }
 
