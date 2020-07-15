@@ -97,6 +97,7 @@ public class PhotoService {
                                            .delete(Delete.builder().objects(deletePhotos).build())
                                            .bucket("kooriim-images")
                                            .build());
+
                return photoRepository.deleteByPhotoIds(ids).then();
              }).doOnNext(result -> logger.info("Deleted photos from s3"))
              .doOnError(error -> logger.error("Error deleting photos", error.getMessage(), ids))
@@ -106,13 +107,14 @@ public class PhotoService {
   public Mono<Photo> setBase64Thumbnail(Photo photo) {
     return Mono.fromCallable(() -> {
       final byte[] bytes;
-      bytes = awsS3Client.getObjectAsBytes(GetObjectRequest
+      var s3Object = awsS3Client.getObject(GetObjectRequest
                                              .builder()
                                              .key("thumbnail." + photo
                                                     .getTitle())
                                              .bucket("kooriim-images")
-                                             .build())
-                .asByteArray();
+                                             .build());
+      bytes = s3Object.readAllBytes();
+      s3Object.close();
       photo.setBase64ThumbnailPhoto(generateBase64Image(photo, bytes));
       return photo;
     }).doOnNext(result -> logger.info("fetched image from s3 {}", result.getThumbnailFilePath()))
@@ -123,13 +125,14 @@ public class PhotoService {
   public Mono<Photo> setBase64SrcPhoto(Photo photo) {
     return Mono.fromCallable(() -> {
       final byte[] bytes;
-      bytes = awsS3Client.getObjectAsBytes(GetObjectRequest
+      var s3Object = awsS3Client.getObject(GetObjectRequest
                                              .builder()
                                              .key(photo
                                                     .getFilePath())
                                              .bucket("kooriim-images")
-                                             .build())
-                .asByteArray();
+                                             .build());
+      bytes = s3Object.readAllBytes();
+      s3Object.close();
       photo.setBase64SrcPhoto(generateBase64Image(photo, bytes));
       return photo;
     }).doOnNext(result -> logger.info("fetched image from s3 {}", result.getFilePath()))
