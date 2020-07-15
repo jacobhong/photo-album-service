@@ -82,13 +82,13 @@ public class PhotoService {
                var deletePhotos = photos
                                     .stream()
                                     .map(photo -> ObjectIdentifier.builder()
-                                                    .key(photo.getFilePath())
+                                                    .key(photo.getTitle())
                                                     .build())
                                     .collect(Collectors.toList());
                var deleteThumbnails = photos
                                         .stream()
                                         .map(photo -> ObjectIdentifier.builder()
-                                                        .key(photo.getThumbnailFilePath())
+                                                        .key("thumbnail." + photo.getTitle())
                                                         .build())
                                         .collect(Collectors.toList());
                deletePhotos.addAll(deleteThumbnails);
@@ -99,6 +99,7 @@ public class PhotoService {
                                            .build());
                return photoRepository.deleteByPhotoIds(ids).then();
              }).doOnNext(result -> logger.info("Deleted photos from s3"))
+             .doOnError(error -> logger.error("Error deleting photos", error.getMessage(), ids))
              .then();
   }
 
@@ -107,9 +108,8 @@ public class PhotoService {
       final byte[] bytes;
       bytes = awsS3Client.getObjectAsBytes(GetObjectRequest
                                              .builder()
-                                             .key(photo
-                                                    .getThumbnailFilePath()
-                                                    .toLowerCase())
+                                             .key("thumbnail." + photo
+                                                    .getTitle())
                                              .bucket("kooriim-images")
                                              .build())
                 .asByteArray();
@@ -126,8 +126,7 @@ public class PhotoService {
       bytes = awsS3Client.getObjectAsBytes(GetObjectRequest
                                              .builder()
                                              .key(photo
-                                                    .getFilePath()
-                                                    .toLowerCase())
+                                                    .getFilePath())
                                              .bucket("kooriim-images")
                                              .build())
                 .asByteArray();
@@ -176,7 +175,7 @@ public class PhotoService {
       final var thumbnailPath = fileName.substring(0, fileName.lastIndexOf(".")) + ".thumbnail." + contentType;
       return compressImageS3Push(file, contentType)
                .flatMap(image -> photoRepository
-                                   .save(Photo.newInstance(file, fileName, thumbnailPath, contentType, name)));
+                                   .save(Photo.newInstance(file, S3_BUCKET + fileName, S3_BUCKET + thumbnailPath, contentType, name)));
     };
   }
 
@@ -231,14 +230,14 @@ public class PhotoService {
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket("kooriim-images")
-                              .key(file.filename().toLowerCase())
+                              .key(file.filename())
                               .build(), RequestBody.fromBytes(compressedImageResult));
 
       logger.info("pushing photo to s3");
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket("kooriim-images")
-                              .key(thumbnailPath)
+                              .key("thumbnail." + file.filename())
                               .build(), RequestBody.fromBytes(compressedThumbnailResult));
       tempFile.delete();
       return compressedImageResult;

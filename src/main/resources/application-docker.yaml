@@ -57,3 +57,4 @@ management:
   security:
     enabled: false
 require-ssl: ${REQUIRE_SSL}
+allowed-origin: ${ALLOWED_ORIGIN}

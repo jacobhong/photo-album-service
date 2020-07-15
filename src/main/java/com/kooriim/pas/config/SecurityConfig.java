@@ -25,6 +25,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import reactor.core.publisher.Mono;
+import software.amazon.awssdk.utils.StringUtils;
 
 import java.net.MalformedURLException;
 import java.util.Arrays;
@@ -43,6 +44,9 @@ public class SecurityConfig {
   @Value("${require-ssl}")
   private boolean sslRequired;
 
+  @Value("${allowed-origin}")
+  private String origin;
+
   @Autowired
   private GoogleUserRegistration googleUserRegistration;
 
@@ -51,7 +55,12 @@ public class SecurityConfig {
     CorsConfiguration corsConfig = new CorsConfiguration();
     corsConfig.applyPermitDefaultValues();
     corsConfig.addAllowedMethod("OPTIONS");
-    corsConfig.setAllowedOrigins(Arrays.asList("https://now.kooriim.com"));
+    corsConfig.addAllowedMethod("PATCH");
+    corsConfig.addAllowedMethod("DELETE");
+
+//    if (StringUtils.isNotBlank(origin)) {
+      corsConfig.setAllowedOrigins(Arrays.asList(origin));
+//    }
     UrlBasedCorsConfigurationSource source =
       new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", corsConfig);
