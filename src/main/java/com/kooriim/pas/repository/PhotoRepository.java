@@ -73,7 +73,7 @@ public class PhotoRepository {
       var em = entityManagerFactory.createEntityManager();
       var trans = em.getTransaction();
       trans.begin();
-      final var result = em.createNativeQuery("DELETE photo_album, photo FROM photo_album JOIN photo ON photo_album.photo_id=photo.id WHERE photo.id in (:ids)")
+      final var result = em.createNativeQuery("DELETE photo_album, photo FROM photo_album RIGHT JOIN photo ON photo_album.photo_id=photo.id WHERE photo.id in (:ids)")
                            .setParameter("ids", ids)
                            .executeUpdate();
       trans.commit();

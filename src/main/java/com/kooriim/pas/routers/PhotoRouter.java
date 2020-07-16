@@ -27,7 +27,7 @@ public class PhotoRouter {
         .andRoute(GET("/photos").and(ACCEPTS_JSON), photoHandler::getPhotos)
         .andRoute(PATCH("/photos").and(CONTENT_TYPE_JSON), photoHandler::patchPhotos)
         .andRoute(DELETE("/photos/{id}").and(ACCEPTS_JSON), photoHandler::deletePhoto)
-        .andRoute(DELETE("/photos").and(ACCEPTS_JSON), photoHandler::deletePhotos)
+        .andRoute(DELETE("/photos").and(CONTENT_TYPE_JSON), photoHandler::deletePhotos)
         .andRoute(POST("/photos").and(ACCEPTS_JSON).and(RequestPredicates.contentType(MediaType.MULTIPART_FORM_DATA)), photoHandler::create));
 
 //          .andRoute(POST("/orders").and(CONTENT_TYPE_JSON), orderHandler::createOrderHandler)

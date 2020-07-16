@@ -128,7 +128,7 @@ public class PhotoService {
       var s3Object = awsS3Client.getObject(GetObjectRequest
                                              .builder()
                                              .key(photo
-                                                    .getFilePath())
+                                                    .getTitle())
                                              .bucket("kooriim-images")
                                              .build());
       bytes = s3Object.readAllBytes();
@@ -140,8 +140,9 @@ public class PhotoService {
              .subscribeOn(Schedulers.elastic());
   }
 
-  public Mono<Void> patchPhotos(Mono<List<Photo>> photos) {
-    return photos.doOnNext(p -> p.forEach(photo -> photoRepository.save(photo))).then();
+  public Mono<Void> patchPhotos(List<Photo> photos) {
+    photos.forEach(photo -> photoRepository.save(photo).then());
+    return Mono.empty();
   }
 
   private Publisher<? extends Photo> getPhotosSetBase64(MultiValueMap<String, String> params, Pageable pageable, String name) {
@@ -171,10 +172,8 @@ public class PhotoService {
   private Function<String, Mono<? extends Photo>> compressAndSaveImage(FilePart file) {
     return name -> {
       final var contentType = file.filename()
-                                .toLowerCase()
                                 .endsWith((".png")) ? "png" : "jpg";
-      final var fileName = file.filename()
-                             .toLowerCase();
+      final var fileName = file.filename();
       final var thumbnailPath = fileName.substring(0, fileName.lastIndexOf(".")) + ".thumbnail." + contentType;
       return compressImageS3Push(file, contentType)
                .flatMap(image -> photoRepository
@@ -229,7 +228,7 @@ public class PhotoService {
       final byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
       final byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
       logger.info("pushing thumbnail to s3");
-      final var thumbnailPath = file.filename().toLowerCase().substring(0, file.filename().lastIndexOf(".")) + ".thumbnail." + contentType;
+      final var thumbnailPath = file.filename().substring(0, file.filename().lastIndexOf(".")) + ".thumbnail." + contentType;
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket("kooriim-images")

@@ -57,10 +57,7 @@ public class SecurityConfig {
     corsConfig.addAllowedMethod("OPTIONS");
     corsConfig.addAllowedMethod("PATCH");
     corsConfig.addAllowedMethod("DELETE");
-
-//    if (StringUtils.isNotBlank(origin)) {
-      corsConfig.setAllowedOrigins(Arrays.asList(origin));
-//    }
+    corsConfig.setAllowedOrigins(Arrays.asList(origin));
     UrlBasedCorsConfigurationSource source =
       new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", corsConfig);

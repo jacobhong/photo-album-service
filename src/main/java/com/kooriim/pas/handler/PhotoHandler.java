@@ -2,6 +2,7 @@ package com.kooriim.pas.handler;
 
 import com.kooriim.pas.domain.Photo;
 import com.kooriim.pas.service.PhotoService;
+import net.minidev.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -49,19 +51,23 @@ public class PhotoHandler {
   }
 
   public Mono<ServerResponse> deletePhotos(ServerRequest serverRequest) {
-    final var ids = (String) serverRequest.queryParam("photoIds").get();
-    logger.info("deleting photo id: {}", ids);
-    return photoService.deletePhotos(Arrays.asList(ids.split(","))
-                                       .stream()
-                                       .map(Integer::valueOf)
-                                       .collect(Collectors.toList())).flatMap(v -> ServerResponse.ok().build());
+    return serverRequest
+             .bodyToMono(JSONObject.class)
+             .doOnError(error -> logger.error("Errer deleting photos {}", error.getMessage()))
+             .doOnNext(ids -> logger.info("deleting photo id: {}", ids))
+             .flatMap(jsonObject -> {
+               var ids = (List<Integer>) jsonObject.get("ids");
+               return photoService.deletePhotos(ids)
+                        .flatMap(v -> ServerResponse.ok().build());
+             });
+
   }
 
   public Mono<ServerResponse> patchPhotos(ServerRequest serverRequest) {
-    final var photos = serverRequest.bodyToMono(new ParameterizedTypeReference<List<Photo>>() {
-    });
-    logger.info("patching photos: {}", photos);
-    return photoService.patchPhotos(photos).flatMap(v -> ServerResponse.ok().build());
+    return serverRequest.bodyToMono(new ParameterizedTypeReference<List<Photo>>() {})
+             .doOnNext(photos -> logger.info("patching photos: {}", photos))
+             .flatMap(photos -> photoService.patchPhotos(photos).flatMap(v -> ServerResponse.ok().build()));
+
   }
 
   public Mono<ServerResponse> create(ServerRequest serverRequest) {
