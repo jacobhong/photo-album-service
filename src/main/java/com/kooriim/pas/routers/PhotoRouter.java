@@ -50,9 +50,8 @@ public class PhotoRouter {
     return nest(path("/photo-album-service"),
       RouterFunctions.route(GET("/albums").and(ACCEPTS_JSON), albumHandler::getAlbums)
         .andRoute(POST("/albums").and(CONTENT_TYPE_JSON), albumHandler::create)
-        .andRoute(PATCH("/albums/{id}").and(CONTENT_TYPE_JSON), albumHandler::addPhotosToAlbum));
-//          .andRoute(PATCH("/orders").and(CONTENT_TYPE_JSON), orderHandler::patchOrders)
-//          .andRoute(DELETE("/orders/{id}"), orderHandler::deleteOrder)).filter(this::checkCommonRequiredHeaders);
+        .andRoute(PATCH("/albums/{id}").and(CONTENT_TYPE_JSON), albumHandler::addPhotosToAlbum)
+          .andRoute(DELETE("/albums/{id}").and(ACCEPTS_JSON), albumHandler::delete));
   }
 
 //  @Bean

@@ -25,17 +25,13 @@ public class AlbumHandler {
   @Autowired
   private AlbumService albumService;
 
-  //  @RequestMapping(value = "", method = RequestMethod.GET)
-//  public ResponseEntity<Set<Album>> getAlbums(Pageable pageable) {
-//    logger.info("getting all albums");
-//    return new ResponseEntity(albumService.getAlbums(pageable), HttpStatus.OK);
-//  }
-  //  @RequestMapping(value = "", method = RequestMethod.POST, consumes = "application/json")
-//  public ResponseEntity<Album> saveOrUpdateAlbum(@RequestBody Album album) {
-//    logger.info("creating album {}", album.getTitle());
-//    return new ResponseEntity(albumService.saveOrUpdateAlbum(album), HttpStatus.OK);
-//  }
-//o
+  public Mono<ServerResponse> delete(final ServerRequest serverRequest) {
+    final var id = serverRequest.pathVariable("id");
+
+    return albumService.deleteAlbum(Integer.valueOf(id))
+             .flatMap(photos -> ServerResponse.ok().bodyValue(photos));
+  }
+
   public Mono<ServerResponse> getAlbums(final ServerRequest serverRequest) {
     logger.info("Getting albums");
     final var page = serverRequest.queryParam("page");

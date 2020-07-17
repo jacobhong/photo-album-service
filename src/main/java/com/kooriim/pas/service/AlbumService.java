@@ -96,16 +96,16 @@ public class AlbumService {
              });
   }
 
-  //  @Transactional
   public Mono<Void> addPhotosToAlbum(Integer albumId, List<Integer> ids) {
     return photoRepository.deleteAllPhotosByAlbumId(albumId)
              .doOnNext(result -> ids.forEach(id -> albumRepository.savePhotoAlbum(albumId, id)
                .subscribe())).then();
   }
-//
-//  @Transactional
-//  public void deleteAlbum(Integer albumId) {
-//    this.photoRepository.deleteAllPhotosByAlbumId(albumId);
-//    this.albumRepository.deleteById(albumId);
-//  }
+
+  public Mono<Void> deleteAlbum(Integer albumId) {
+    return this.photoRepository.deleteAllPhotosByAlbumId(albumId)
+      .flatMap(result -> this.albumRepository.deleteById(albumId).then())
+             .then();
+
+  }
 }

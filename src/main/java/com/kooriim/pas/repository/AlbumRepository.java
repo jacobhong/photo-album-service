@@ -80,6 +80,22 @@ public class AlbumRepository {
              .subscribeOn(Schedulers.elastic());
   }
 
+  public Mono<Void> deleteById(Integer id) {
+    return Mono.fromCallable(() -> {
+      var em = entityManagerFactory.createEntityManager();
+      var trans = em.getTransaction();
+      trans.begin();
+      final var result = em.createNativeQuery("DELETE album WHERE album.id = :id")
+                           .setParameter("id", id)
+                           .executeUpdate();
+      trans.commit();
+      em.close();
+      return result;
+    }).doOnNext(result -> logger.info("Deleted album by Id {}", id.toString()))
+             .doOnError(error -> logger.error("Error deleting by album id {}", error.getMessage()))
+             .then()
+             .subscribeOn(Schedulers.elastic());
+  }
 
 
 }
