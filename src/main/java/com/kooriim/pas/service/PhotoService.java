@@ -40,7 +40,10 @@ import java.util.stream.Collectors;
 @Service
 public class PhotoService {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
-  private static final String S3_BUCKET = "https://kooriim-images.s3-us-west-1.amazonaws.com/";
+  private static final String S3_BUCKET_BASE_URL = "https://kooriim-images.s3-us-west-1.amazonaws.com/";
+  @Value("${s3.bucketName}")
+  private String S3_BUCKET_NAME;
+
   @Value("${image-directory}")
   private String imgDir;
 
@@ -95,12 +98,12 @@ public class PhotoService {
                awsS3Client.deleteObjects(DeleteObjectsRequest
                                            .builder()
                                            .delete(Delete.builder().objects(deletePhotos).build())
-                                           .bucket("kooriim-images")
+                                           .bucket(S3_BUCKET_NAME)
                                            .build());
 
                return photoRepository.deleteByPhotoIds(ids).then();
              }).doOnNext(result -> logger.info("Deleted photos from s3"))
-             .doOnError(error -> logger.error("Error deleting photos", error.getMessage(), ids))
+             .doOnError(error -> logger.error("Error deleting photos {}, {}", error.getMessage(), ids))
              .then();
   }
 
@@ -110,8 +113,8 @@ public class PhotoService {
       var s3Object = awsS3Client.getObject(GetObjectRequest
                                              .builder()
                                              .key("thumbnail." + photo
-                                                    .getTitle())
-                                             .bucket("kooriim-images")
+                                                                   .getTitle())
+                                             .bucket(S3_BUCKET_NAME)
                                              .build());
       bytes = s3Object.readAllBytes();
       s3Object.close();
@@ -129,20 +132,21 @@ public class PhotoService {
                                              .builder()
                                              .key(photo
                                                     .getTitle())
-                                             .bucket("kooriim-images")
+                                             .bucket(S3_BUCKET_NAME)
                                              .build());
       bytes = s3Object.readAllBytes();
       s3Object.close();
       photo.setBase64SrcPhoto(generateBase64Image(photo, bytes));
       return photo;
     }).doOnNext(result -> logger.info("fetched image from s3 {}", result.getFilePath()))
-             .doOnError(error -> logger.error("Error setting base64 thumbnail {} for photoId {}", error.getMessage(), photo.getId()))
+             .doOnError(error -> logger.error("Error setting setBase64SrcPhoto {} for photoId {}", error.getMessage(), photo.getId()))
              .subscribeOn(Schedulers.elastic());
   }
 
   public Mono<Void> patchPhotos(List<Photo> photos) {
-    photos.forEach(photo -> photoRepository.save(photo).then());
-    return Mono.empty();
+    return Flux.fromIterable(photos)
+             .flatMap(p -> photoRepository.save(p))
+             .then();
   }
 
   private Publisher<? extends Photo> getPhotosSetBase64(MultiValueMap<String, String> params, Pageable pageable, String name) {
@@ -177,7 +181,7 @@ public class PhotoService {
       final var thumbnailPath = fileName.substring(0, fileName.lastIndexOf(".")) + ".thumbnail." + contentType;
       return compressImageS3Push(file, contentType)
                .flatMap(image -> photoRepository
-                                   .save(Photo.newInstance(file, S3_BUCKET + fileName, S3_BUCKET + thumbnailPath, contentType, name)));
+                                   .save(Photo.newInstance(file, S3_BUCKET_BASE_URL + fileName, S3_BUCKET_BASE_URL + thumbnailPath, contentType, name)));
     };
   }
 
@@ -231,14 +235,14 @@ public class PhotoService {
       final var thumbnailPath = file.filename().substring(0, file.filename().lastIndexOf(".")) + ".thumbnail." + contentType;
       awsS3Client.putObject(PutObjectRequest
                               .builder()
-                              .bucket("kooriim-images")
+                              .bucket(S3_BUCKET_NAME)
                               .key(file.filename())
                               .build(), RequestBody.fromBytes(compressedImageResult));
 
       logger.info("pushing photo to s3");
       awsS3Client.putObject(PutObjectRequest
                               .builder()
-                              .bucket("kooriim-images")
+                              .bucket(S3_BUCKET_NAME)
                               .key("thumbnail." + file.filename())
                               .build(), RequestBody.fromBytes(compressedThumbnailResult));
       tempFile.delete();

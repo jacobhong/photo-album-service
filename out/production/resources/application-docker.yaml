@@ -8,6 +8,8 @@ server:
     key-store: classpath:keystore.p12
     key-store-password: ${KEYSTORE_PASSWORD}
     key-store-type: PKCS12
+    protocol: TLS
+    enabled-protocols: TLSv1.3
 spring:
   security:
     #    user:
@@ -39,7 +41,7 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: true
-image-directory: /opt/images
+image-directory: /tmp/images
 keycloak:
   realm: kooriim-fe
   resource: kooriim-fe
@@ -54,6 +56,7 @@ management:
   #        include: "info"
   security:
     enabled: false
-cors:
-  allowed-origin: ${CORS_ALLOWED_ORIGIN}
 require-ssl: ${REQUIRE_SSL}
+allowed-origin: ${ALLOWED_ORIGIN}
+s3:
+  bucketName: ${BUCKET_NAME}

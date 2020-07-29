@@ -27,14 +27,19 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: true
-image-directory: /opt/images
+image-directory: /tmp/images
 management:
   security:
     enabled: false
-cors:
-  allowed-origin: "*"
 #logging:
 #  level:
 #    org:
 #      hibernate:
 #        SQL: DEBUG
+allowed-origin: "*"
+s3:
+  bucketName: kooriim-images-test
+#logging:
+#  level:
+#    reactor:
+#      netty: DEBUG

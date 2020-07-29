@@ -10,14 +10,13 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class PhotoHandler {
@@ -28,10 +27,14 @@ public class PhotoHandler {
 
   public Mono<ServerResponse> getPhotos(final ServerRequest serverRequest) {
     logger.info("getting all photos with queryParams: {}", serverRequest.queryParams());
-    final var page = serverRequest.queryParam("page");
-    final var size = serverRequest.queryParam("size");
+    final var page = serverRequest.queryParam("page").get();
+    final var size = serverRequest.queryParam("size").get();
+    if (StringUtils.isEmpty(page) || StringUtils.isEmpty(size)) {
+      return ServerResponse.badRequest().bodyValue("Must send page and size parameter");
+    }
     final var queryParams = serverRequest.queryParams();
-    return photoService.getPhotosByQueryParams(queryParams, PageRequest.of(Integer.valueOf(page.get()), Integer.valueOf(size.get())))
+    final var pageable = PageRequest.of(Integer.valueOf(page), Integer.valueOf(size));
+    return photoService.getPhotosByQueryParams(queryParams, pageable)
              .collectList()
              .flatMap(photos -> ServerResponse.ok().bodyValue(photos));
   }
@@ -64,7 +67,8 @@ public class PhotoHandler {
   }
 
   public Mono<ServerResponse> patchPhotos(ServerRequest serverRequest) {
-    return serverRequest.bodyToMono(new ParameterizedTypeReference<List<Photo>>() {})
+    return serverRequest.bodyToMono(new ParameterizedTypeReference<List<Photo>>() {
+    })
              .doOnNext(photos -> logger.info("patching photos: {}", photos))
              .flatMap(photos -> photoService.patchPhotos(photos).flatMap(v -> ServerResponse.ok().build()));
 

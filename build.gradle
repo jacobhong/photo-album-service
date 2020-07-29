@@ -27,17 +27,18 @@ dependencies {
 	implementation 'org.springframework.security:spring-security-oauth2-resource-server'
 	implementation platform('software.amazon.awssdk:bom:2.13.46')
 	implementation 'software.amazon.awssdk:s3'
-	
 	compile group: 'net.coobird', name: 'thumbnailator', version: '0.4.8'
 	compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.19'
 	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.11'
-
 //	compile group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5.3.2'
 	testImplementation('com.h2database:h2:1.4.200')
 	testImplementation('org.springframework.boot:spring-boot-starter-test') {
 //		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
 	}
 	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation 'io.projectreactor:reactor-test'
+	testImplementation 'org.awaitility:awaitility:4.0.3'
+
 }
 
 //

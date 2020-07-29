@@ -51,3 +51,5 @@ management:
     enabled: false
 require-ssl: false
 allowed-origin: "*"
+s3:
+  bucketName: kooriim-images-test

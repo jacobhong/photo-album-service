@@ -68,6 +68,13 @@ public class PhotoRepository {
              .subscribeOn(Schedulers.elastic());
   }
 
+  public Flux<Photo> getPhotos() {
+    return Flux.defer(() -> Flux.fromIterable(entityManager
+                                                .createNativeQuery("SELECT * FROM photo", Photo.class)
+                                                .getResultList()))
+             .subscribeOn(Schedulers.elastic());
+  }
+
   public Mono<Void> deleteByPhotoIds(List<Integer> ids) {
     return Mono.fromCallable(() -> {
       var em = entityManagerFactory.createEntityManager();
@@ -80,7 +87,7 @@ public class PhotoRepository {
       em.close();
       return result;
     }).doOnNext(result -> logger.info("Deleted photosById {}", ids.toString()))
-             .doOnError(error -> logger.error("Error getting photosByIds {}", error.getMessage()))
+             .doOnError(error -> logger.error("Error deleting photosByIds {}", error))
              .then()
              .subscribeOn(Schedulers.elastic());
   }

@@ -85,7 +85,7 @@ public class AlbumRepository {
       var em = entityManagerFactory.createEntityManager();
       var trans = em.getTransaction();
       trans.begin();
-      final var result = em.createNativeQuery("DELETE album WHERE album.id = :id")
+      final var result = em.createNativeQuery("DELETE from album WHERE id = :id")
                            .setParameter("id", id)
                            .executeUpdate();
       trans.commit();

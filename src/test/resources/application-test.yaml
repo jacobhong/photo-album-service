@@ -36,3 +36,10 @@ management:
 #    org:
 #      hibernate:
 #        SQL: DEBUG
+allowed-origin: "*"
+s3:
+  bucketName: kooriim-images-test
+#logging:
+#  level:
+#    reactor:
+#      netty: DEBUG

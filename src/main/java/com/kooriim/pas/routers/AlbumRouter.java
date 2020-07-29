@@ -1,51 +1,25 @@
 package com.kooriim.pas.routers;
 
-import com.kooriim.pas.domain.Album;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.kooriim.pas.handler.AlbumHandler;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.server.RouterFunction;
+import org.springframework.web.reactive.function.server.RouterFunctions;
+import org.springframework.web.reactive.function.server.ServerResponse;
 
-import java.util.Set;
+import static com.kooriim.pas.routers.PhotoRouter.ACCEPTS_JSON;
+import static com.kooriim.pas.routers.PhotoRouter.CONTENT_TYPE_JSON;
+import static org.springframework.web.reactive.function.server.RequestPredicates.*;
+import static org.springframework.web.reactive.function.server.RouterFunctions.nest;
+@Configuration
 
 public class AlbumRouter {
-//  private final Logger logger = LoggerFactory.getLogger(this.getClass());
-//  @Autowired
-//  private AlbumRepository albumRepository;
-//  @Autowired
-//  private AlbumService albumService;
-////
-////  @RequestMapping(value = "/{id}", method = RequestMethod.GET, consumes = "application/json")
-////  public ResponseEntity<Set<Album>> getAlbumById(@PathVariable(name = "id") Integer id, @RequestParam Map<String, String> params) {
-////    logger.info("getting album by id {}", id);
-////    return new ResponseEntity(albumService.getAlbumById(id, params), HttpStatus.OK);
-////  }
-//
-////  @RequestMapping(value = "", method = RequestMethod.GET)
-//  public ResponseEntity<Set<Album>> getAlbums(Pageable pageable) {
-//    logger.info("getting all albums");
-//    return new ResponseEntity(albumService.getAlbums(pageable), HttpStatus.OK);
-//  }
-//
-////  @RequestMapping(value = "", method = RequestMethod.POST, consumes = "application/json")
-//  public ResponseEntity<Album> saveOrUpdateAlbum(@RequestBody Album album) {
-//    logger.info("creating album {}", album.getTitle());
-//    return new ResponseEntity(albumService.saveOrUpdateAlbum(album), HttpStatus.OK);
-//  }
-//
-////  @RequestMapping(value = "/{id}", method = RequestMethod.PATCH, consumes = "application/json")
-//  public ResponseEntity<Void> addPhotosToAlbum(@PathVariable("id") Integer albumId,
-//                                               @RequestBody List<Integer> ids) {
-//    logger.info("adding photoIds: {}, to album: {}", ids, albumId);
-//    albumService.addPhotosToAlbum(albumId, ids);
-//    return new ResponseEntity(HttpStatus.OK);
-//
-//  }
-//
-////  @RequestMapping(value = "/{id}", method = RequestMethod.DELETE)
-//  public ResponseEntity<Void> delete(@PathVariable("id") Integer albumId) {
-//    logger.info("deleting album: {}", albumId);
-//    albumService.deleteAlbum(albumId);
-//    return new ResponseEntity(HttpStatus.OK);
-//
-//  }
+  @Bean
+  public RouterFunction<ServerResponse> route3(AlbumHandler albumHandler) {
+    return nest(path("/photo-album-service"),
+      RouterFunctions.route(GET("/albums").and(ACCEPTS_JSON), albumHandler::getAlbums)
+        .andRoute(POST("/albums").and(CONTENT_TYPE_JSON), albumHandler::create)
+        .andRoute(PATCH("/albums/{id}").and(CONTENT_TYPE_JSON), albumHandler::addPhotosToAlbum)
+        .andRoute(DELETE("/albums/{id}").and(ACCEPTS_JSON), albumHandler::delete));
+  }
 }
