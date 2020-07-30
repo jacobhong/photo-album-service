@@ -1,5 +1,5 @@
 
-DROP TABLE IF EXISTS users;
+ DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE IF NOT EXISTS users (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL ,
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP
 )  ENGINE=INNODB DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS photo;
+DROP TABLE IF EXISTS photo CASCADE ;
 CREATE TABLE IF NOT EXISTS photo (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS photo (
     FOREIGN KEY (google_id) REFERENCES users(google_id)
 )  ENGINE=INNODB DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS album;
+DROP TABLE IF EXISTS album CASCADE ;
 CREATE TABLE IF NOT EXISTS album (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL UNIQUE,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS album (
     FOREIGN KEY (google_id) REFERENCES users(google_id)
 )  ENGINE=INNODB DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS photo_album;
+DROP TABLE IF EXISTS photo_album CASCADE;
 CREATE TABLE IF NOT EXISTS photo_album (
     photo_id INT(11) NOT NULL,
     album_id INT(11) NOT NULL,
@@ -45,12 +45,3 @@ CREATE TABLE IF NOT EXISTS photo_album (
     FOREIGN KEY (album_id) REFERENCES album(id)
 )  ENGINE=INNODB DEFAULT CHARSET=utf8;
 
-INSERT INTO `users` (`name`, `google_id`, `email`, `created`, `updated`)
-VALUES
-	('test', 'anonymousUser', 'anonymousUser', '2020-02-23 02:48:35', '2020-02-23 02:48:35');
---INSERT INTO `photo` (`id`, `title`, `file_path`, `thumbnail_file_path`, `content_type`, `description`, `google_id`, `created`, `updated`)
---VALUES
---	(1, 'test', 'test', 'test', 'test', 'test', 'anonymousUser', '2020-02-23 02:48:35', '2020-02-23 02:48:35');
---INSERT INTO `photo` (`id`, `title`, `file_path`, `thumbnail_file_path`, `content_type`, `description`, `google_id`, `created`, `updated`)
---VALUES
---	(2, 'test', 'test', 'test', 'test', 'test', 'anonymousUser', '2020-02-23 02:48:35', '2020-02-23 02:48:35');

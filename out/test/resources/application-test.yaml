@@ -39,6 +39,18 @@ management:
 allowed-origin: "*"
 s3:
   bucketName: kooriim-images-test
+#reactor:
+#  ipc:
+#    netty:
+#      channel:
+#        ContextHandler: DEBUG
+#      http:
+#        server:
+#          HttpServer: DEBUG
+#  netty:
+#    http:
+#      server:
+#        accessLogEnabled: true
 #logging:
 #  level:
 #    reactor:

@@ -3,7 +3,6 @@ package com.kooriim.pas.controller;
 import com.kooriim.pas.domain.Photo;
 import com.kooriim.pas.repository.PhotoRepository;
 import com.kooriim.pas.service.PhotoService;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,7 +22,6 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -131,7 +129,7 @@ public class PhotoControllerIT {
   }
 
 
-  @Ignore
+//  @Ignore
   @WithMockUser("anonymousUser")
   public void testDeletePhoto() {
     final var photo = createPhoto();

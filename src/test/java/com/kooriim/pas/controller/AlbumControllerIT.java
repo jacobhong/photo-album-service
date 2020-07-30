@@ -7,6 +7,7 @@ import com.kooriim.pas.repository.PhotoRepository;
 import com.kooriim.pas.repository.UserRepository;
 import com.kooriim.pas.service.AlbumService;
 import com.kooriim.pas.service.PhotoService;
+import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -72,7 +73,7 @@ public class AlbumControllerIT {
   @BeforeEach
   public void before() {
     entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=0;").executeUpdate();
-//    entityManager.createNativeQuery("truncate table photo_album;").executeUpdate();
+    entityManager.createNativeQuery("truncate table photo_album;").executeUpdate();
     entityManager.createNativeQuery("truncate table photo;").executeUpdate();
     entityManager.createNativeQuery("truncate table album;").executeUpdate();
     entityManager.createNativeQuery("ALTER TABLE photo ALTER id RESTART with 1;").executeUpdate();
@@ -96,7 +97,7 @@ public class AlbumControllerIT {
       .expectBodyList(Album.class).consumeWith(a -> assertEquals(1, a.getResponseBody().size()));
   }
 
-  @Test
+  @Ignore
   @WithMockUser("anonymousUser")
   public void addPhotosToExistingAlbum() {
     final var photo = createPhoto().getResponseBody();
