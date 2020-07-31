@@ -129,6 +129,7 @@ public class PhotoControllerIT {
   }
 
 
+  //cant delete with join with h2
 //  @Ignore
   @WithMockUser("anonymousUser")
   public void testDeletePhoto() {

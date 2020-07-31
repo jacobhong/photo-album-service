@@ -97,25 +97,25 @@ public class AlbumControllerIT {
       .expectBodyList(Album.class).consumeWith(a -> assertEquals(1, a.getResponseBody().size()));
   }
 
-  @Ignore
+  @Test
   @WithMockUser("anonymousUser")
-  public void addPhotosToExistingAlbum() {
+  public void addPhotosToExistingAlbum() throws InterruptedException {
     final var photo = createPhoto().getResponseBody();
     final var album = createAlbum().getResponseBody();
-    webTestClient.patch().uri("/photo-album-service/albums/{id}", album.getId())
-      .body(BodyInserters.fromValue(Arrays.asList(photo.getId())))
-      .exchange()
-      .expectStatus()
-      .is2xxSuccessful();
+    final var aaaaa = webTestClient.patch().uri("/photo-album-service/albums/{id}", album.getId())
+                        .body(BodyInserters.fromValue(Arrays.asList(photo.getId())))
+                        .exchange()
+                        .expectStatus()
+                        .is2xxSuccessful()
+                        .expectBody(Void.class)
+                        .returnResult();
+    Thread.sleep(1000);
     final var result = webTestClient.get().uri("/photo-album-service/albums?page=0&size=10")
-      .exchange()
-      .expectStatus()
-      .is2xxSuccessful()
-      .expectBodyList(Album.class)
-      .consumeWith(albumList -> albumList.getResponseBody()
-                                  .stream()
-                                  .filter(a -> a.getId().equals(album.getId()))
-                                  .collect(Collectors.toList())).returnResult();
+                         .exchange()
+                         .expectStatus()
+                         .is2xxSuccessful()
+                         .expectBodyList(Album.class)
+                         .returnResult();
     assertEquals(1, result.getResponseBody().size());
     assertEquals(1, result.getResponseBody().get(0).getPreviewPhotos().size());
   }
