@@ -122,6 +122,7 @@ public class PhotoService {
       return photo;
     }).doOnNext(result -> logger.info("fetched image from s3 {}", result.getThumbnailFilePath()))
              .doOnError(error -> logger.error("Error setting base64 thumbnail {} for photoId {}", error.getMessage(), photo.getId()))
+             .onErrorResume(p -> Mono.empty())
              .subscribeOn(Schedulers.elastic());
   }
 
@@ -140,6 +141,7 @@ public class PhotoService {
       return photo;
     }).doOnNext(result -> logger.info("fetched image from s3 {}", result.getFilePath()))
              .doOnError(error -> logger.error("Error setting setBase64SrcPhoto {} for photoId {}", error.getMessage(), photo.getId()))
+             .onErrorResume(p -> Mono.empty())
              .subscribeOn(Schedulers.elastic());
   }
 
