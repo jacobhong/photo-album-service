@@ -25,7 +25,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.utils.StringUtils;
 
 import java.net.MalformedURLException;
 import java.util.Arrays;

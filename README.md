@@ -31,9 +31,9 @@ DEPRECATED(use certbot)
 create private cert for testing
 ```$xslt
 keytool -genkeypair -alias keycloak.kooriim.com -keyalg RSA -keystore keycloak.jks -validity 10950
-keytool -importkeystore -srckeystore keycloak.jks -destkeystore keycloak.p12 -deststoretype PKCS12
-openssl pkcs12 -in keycloak.p12 -nokeys -out tls.crt
-openssl pkcs12 -in keycloak.p12 -nocerts -nodes -out tls.key
+keytool -importkeystore -srckeystore keycloak.jks -destkeystore keystore.p12 -deststoretype PKCS12
+openssl pkcs12 -in keystore.p12 -nokeys -out tls.crt
+openssl pkcs12 -in keystore.p12 -nocerts -nodes -out tls.key
 ```
 
 #certbot renew
