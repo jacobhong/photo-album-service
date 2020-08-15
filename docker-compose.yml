@@ -48,7 +48,7 @@ services:
       DB_VENDOR: mariadb
       DB_SCHEMA: keycloak
 #      KEYCLOAK_LOGLEVEL: DEBUG
-    volumes:
+#    volumes:
 #      - ./docker/keystore/keycloak:/etc/x509/https
     ports:
       - "8080"
