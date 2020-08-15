@@ -52,6 +52,8 @@ authenticate @ localhost:8443/auth keycloak::password
 ```$xslt
 create new realm : kooriim-fe
 create new client : kooriim-fe
+-https://now.kooriim.com/* redirect uri
+-web origins https://now.kooriim.com
 -create mapper in client
 -name: grants, token claim name: grants, claim json type: string
 create new identity provider: google
