@@ -49,12 +49,12 @@ services:
       DB_SCHEMA: keycloak
 #      KEYCLOAK_LOGLEVEL: DEBUG
     volumes:
-      - ./docker/keystore/keycloak:/etc/x509/https
+#      - ./docker/keystore/keycloak:/etc/x509/https
     ports:
-      - "80"
+      - "8080"
 #      - "8081:8080"
 #      - "8443:8443"
-    container_name: keycloak.kooriim.com
+#    container_name: keycloak.kooriim.com
     networks:
       - auth-network
 networks:
