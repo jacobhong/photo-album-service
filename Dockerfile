@@ -1,9 +1,9 @@
 FROM openjdk:11-jdk-slim
 USER root
-COPY docker/keystore/keycloak/tls.crt /usr/local/openjdk-11/lib/security/
-RUN \
-    cd /usr/local/openjdk-11/lib/security/ \
-    && keytool -keystore cacerts -storepass changeit -noprompt -trustcacerts -importcert -alias keycloak.kooriim.com -file tls.crt
+#COPY docker/keystore/keycloak/tls.crt /usr/local/openjdk-11/lib/security/
+#RUN \
+#    cd /usr/local/openjdk-11/lib/security/ \
+#    && keytool -keystore cacerts -storepass changeit -noprompt -trustcacerts -importcert -alias keycloak.kooriim.com -file tls.crt
 ARG JAR_FILE=build/libs/*.jar
 COPY ${JAR_FILE} app.jar
 EXPOSE 8080
