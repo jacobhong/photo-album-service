@@ -70,9 +70,9 @@ public class SecurityConfig {
     http.csrf().disable();
     http.authorizeExchange()
       .pathMatchers("/actuator/*").permitAll()
-      .pathMatchers("/photos/**").hasAnyAuthority("kooriim-fe")
-      .pathMatchers("/albums/**").hasAnyAuthority("kooriim-fe")
-      .pathMatchers("/users/**").hasAnyAuthority("kooriim-fe")
+      .pathMatchers("/photos/**").hasAnyAuthority("kooriim-fe", "kooriim-mobile")
+      .pathMatchers("/albums/**").hasAnyAuthority("kooriim-fe", "kooriim-mobile")
+      .pathMatchers("/users/**").hasAnyAuthority("kooriim-fe", "kooriim-mobile")
       .anyExchange()
       .authenticated()
       .and()
