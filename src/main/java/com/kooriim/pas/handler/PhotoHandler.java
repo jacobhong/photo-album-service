@@ -75,7 +75,9 @@ public class PhotoHandler {
   }
 
   public Mono<ServerResponse> create(ServerRequest serverRequest) {
-    logger.info("creating photo");
+    logger.info("creating photo with request {}", serverRequest);
+    logger.info("creating photo with request {}", serverRequest.formData().block().toSingleValueMap());
+
     return serverRequest
              .multipartData()
              .map(data -> data.toSingleValueMap().get("file")).cast(FilePart.class)

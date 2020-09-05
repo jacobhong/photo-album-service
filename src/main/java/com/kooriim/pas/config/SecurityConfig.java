@@ -100,6 +100,7 @@ public class SecurityConfig {
         // TODO move this somewhere else
         googleUserRegistration.saveUserIfNotExist(jwt.getClaims());
       }
+      logger.info("jwt has these authorities {}", authorities);
       return authorities.stream()
                .map(SimpleGrantedAuthority::new)
                .collect(Collectors.toList());

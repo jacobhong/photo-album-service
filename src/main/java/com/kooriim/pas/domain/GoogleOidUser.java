@@ -55,4 +55,13 @@ public class GoogleOidUser implements Serializable {
     this.googleId = googleId;
   }
 
+  @Override
+  public String toString() {
+    return "GoogleOidUser{" +
+             "id=" + id +
+             ", googleId='" + googleId + '\'' +
+             ", name='" + name + '\'' +
+             ", email='" + email + '\'' +
+             '}';
+  }
 }

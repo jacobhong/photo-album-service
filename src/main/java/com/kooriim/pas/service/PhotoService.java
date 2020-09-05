@@ -257,9 +257,12 @@ public class PhotoService {
   private Mono<String> getUserGoogleId() {
     return ReactiveSecurityContextHolder
              .getContext()
+             .doOnError(error -> logger.error("error authorizing user context {}", error))
              .publishOn(Schedulers.elastic())
              .map(SecurityContext::getAuthentication)
+             .doOnError(error -> logger.error("error authorizing user auth {}", error))
              .map(Authentication::getName)
+             .doOnError(error -> logger.error("error authorizing user name {}", error))
              .doOnNext(name -> logger.info("getting photo for googleId {}", name));
   }
 }

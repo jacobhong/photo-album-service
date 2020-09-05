@@ -26,7 +26,9 @@ public class GoogleUserRegistration  {
   }
 
   private void updateUser(GoogleOidUser googleOidUserInfo) {
+    logger.info("looking for user by email {}", googleOidUserInfo);
     final var existingGoogleUser = userRepository.findByEmail(googleOidUserInfo.getEmail());
+    logger.info("found user {}", existingGoogleUser.getEmail());
     if(existingGoogleUser == null) {
       userRepository.save(googleOidUserInfo);
       logger.info("saved google user {}", googleOidUserInfo.getName());
