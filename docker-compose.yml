@@ -36,17 +36,17 @@ services:
       - ./docker/sql:/docker-entrypoint-initdb.d
     networks:
       - auth-network
-  keycloak:
-    image: jboss/keycloak
-    environment:
-      KEYCLOAK_USER: keycloak131
-      KEYCLOAK_PASSWORD: password131
-      DB_PORT: 3306
-      DB_DATABASE: keycloak
-      DB_PASSWORD: password131
-      DB_USER: keycloak131
-      DB_VENDOR: mariadb
-      DB_SCHEMA: keycloak
+keycloak:
+  image: jboss/keycloak
+  environment:
+    KEYCLOAK_USER: keycloak131
+    KEYCLOAK_PASSWORD: password131
+    DB_PORT: 3306
+    DB_DATABASE: keycloak
+    DB_PASSWORD: password131
+    DB_USER: keycloak131
+    DB_VENDOR: mariadb
+    DB_SCHEMA: keycloak
 #      KEYCLOAK_LOGLEVEL: DEBUG
     volumes:
       - ./docker/keystore/keycloak:/etc/x509/https
