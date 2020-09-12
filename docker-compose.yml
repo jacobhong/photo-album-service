@@ -16,7 +16,7 @@ services:
     env_file:
       - ./docker/photo-album-service.env
     ports:
-      - "8080"
+      - "8080:8080"
     networks:
       - auth-network
     volumes:

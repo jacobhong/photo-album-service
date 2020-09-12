@@ -56,6 +56,9 @@ public class SecurityConfig {
     corsConfig.addAllowedMethod("OPTIONS");
     corsConfig.addAllowedMethod("PATCH");
     corsConfig.addAllowedMethod("DELETE");
+    corsConfig.addAllowedMethod("GET");
+    corsConfig.addAllowedMethod("POST");
+
     corsConfig.setAllowedOrigins(Arrays.asList(origin));
     UrlBasedCorsConfigurationSource source =
       new UrlBasedCorsConfigurationSource();
