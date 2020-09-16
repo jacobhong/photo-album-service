@@ -75,11 +75,12 @@ public class PhotoHandler {
   }
 
   public Mono<ServerResponse> create(ServerRequest serverRequest) {
-    logger.info("creating photo with request {}", serverRequest);
-    logger.info("creating photo with request {}", serverRequest.formData().block().toSingleValueMap());
+    logger.info("creating photo with request {}", serverRequest.headers());
 
     return serverRequest
              .multipartData()
+             .doOnNext(data -> logger.info("got multi part data " + data.toSingleValueMap()))
+             .filter(data -> data.toSingleValueMap().get("file") != null)
              .map(data -> data.toSingleValueMap().get("file")).cast(FilePart.class)
              .flatMap(file -> photoService.savePhoto(file)
                                 .flatMap(photo -> ServerResponse.ok().bodyValue(photo)));

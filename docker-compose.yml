@@ -1,26 +1,26 @@
 version: '3'
 services:
-  nginx:
-    image: nginx:latest
-    container_name: production_nginx
-    volumes:
-      - ./docker/nginx.conf:/etc/nginx/nginx.conf
-      - /etc/letsencrypt/:/etc/letsencrypt/
-    networks:
-      - auth-network
-    ports:
-      - "80:80"
-      - "443:443"
-  photo-album-service:
-    image: 500536527570.dkr.ecr.us-west-1.amazonaws.com/photo-album-service:latest
-    env_file:
-      - ./docker/photo-album-service.env
-    ports:
-      - "8080:8080"
-    networks:
-      - auth-network
-    volumes:
-      - ./docker/images:/tmp/images
+#  nginx:
+#    image: nginx:latest
+#    container_name: production_nginx
+#    volumes:
+#      - ./docker/nginx.conf:/etc/nginx/nginx.conf
+#      - /etc/letsencrypt/:/etc/letsencrypt/
+#    networks:
+#      - auth-network
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#  photo-album-service:
+#    image: 500536527570.dkr.ecr.us-west-1.amazonaws.com/photo-album-service:latest
+#    env_file:
+#      - ./docker/photo-album-service.env
+#    ports:
+#      - "8080:8080"
+#    networks:
+#      - auth-network
+#    volumes:
+#      - ./docker/images:/tmp/images
   mariadb:
     image: mariadb:10.4
     restart: always
@@ -53,7 +53,7 @@ services:
     ports:
       - "8080"
 #      - "8081:8080"
-      - "8443"
+      - "8443:8443"
 #    container_name: keycloak.kooriim.com
     networks:
       - auth-network
