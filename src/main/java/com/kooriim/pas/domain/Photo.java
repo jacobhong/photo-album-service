@@ -4,9 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.SelectBeforeUpdate;
 import org.springframework.http.codec.multipart.FilePart;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.*;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Objects;
@@ -21,16 +21,22 @@ public class Photo implements Serializable {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Integer id;
 
+  @Size(max=30)
   private String title;
-  @Column(name = "file_path")
-  private String filePath;
+  @Column(name = "compressed_image_file_path")
+  private String compressedImageFilePath;
+  @Column(name = "original_image_file_path")
+  private String originalImageFilePath;
   @Column(name = "thumbnail_file_path")
   private String thumbnailFilePath;
+  @Size(max=50)
   private String description;
   @Transient
-  private String base64SrcPhoto;
+  private String base64CompressedImage;
   @Transient
-  private String base64ThumbnailPhoto;
+  private String base64OriginalImage;
+  @Transient
+  private String base64ThumbnailImage;
   @Column(name = "google_id")
   private String googleId;
   private String contentType;
@@ -55,12 +61,12 @@ public class Photo implements Serializable {
     this.title = title;
   }
 
-  public String getFilePath() {
-    return filePath;
+  public String getCompressedImageFilePath() {
+    return compressedImageFilePath;
   }
 
-  public void setFilePath(String filePath) {
-    this.filePath = filePath;
+  public void setCompressedImageFilePath(String compressedImageFilePath) {
+    this.compressedImageFilePath = compressedImageFilePath;
   }
 
   public String getThumbnailFilePath() {
@@ -95,20 +101,20 @@ public class Photo implements Serializable {
     this.updated = updated;
   }
 
-  public String getBase64SrcPhoto() {
-    return base64SrcPhoto;
+  public String getBase64CompressedImage() {
+    return base64CompressedImage;
   }
 
-  public void setBase64SrcPhoto(String base64SrcPhoto) {
-    this.base64SrcPhoto = base64SrcPhoto;
+  public void setBase64CompressedImage(String base64CompressedImage) {
+    this.base64CompressedImage = base64CompressedImage;
   }
 
-  public String getBase64ThumbnailPhoto() {
-    return base64ThumbnailPhoto;
+  public String getBase64ThumbnailImage() {
+    return base64ThumbnailImage;
   }
 
-  public void setBase64ThumbnailPhoto(String base64ThumbnailPhoto) {
-    this.base64ThumbnailPhoto = base64ThumbnailPhoto;
+  public void setBase64ThumbnailImage(String base64ThumbnailImage) {
+    this.base64ThumbnailImage = base64ThumbnailImage;
   }
 
   public String getContentType() {
@@ -135,10 +141,26 @@ public class Photo implements Serializable {
     this.isPublic = isPublic;
   }
 
-  public static Photo newInstance(FilePart file, String filePath, String thumbnailFilePath, String contentType, String googleId) {
+  public String getOriginalImageFilePath() {
+    return originalImageFilePath;
+  }
+
+  public void setOriginalImageFilePath(String originalImageFilePath) {
+    this.originalImageFilePath = originalImageFilePath;
+  }
+
+  public String getBase64OriginalImage() {
+    return base64OriginalImage;
+  }
+
+  public void setBase64OriginalImage(String base64OriginalImage) {
+    this.base64OriginalImage = base64OriginalImage;
+  }
+  public static Photo newInstance(FilePart file, String compressedImageFilePath, String originalImageFilePath, String thumbnailFilePath, String contentType, String googleId) {
     final var photo = new Photo();
     photo.setContentType(contentType);
-    photo.setFilePath(filePath);
+    photo.setCompressedImageFilePath(compressedImageFilePath);
+    photo.setOriginalImageFilePath(originalImageFilePath);
     photo.setThumbnailFilePath(thumbnailFilePath);
     photo.setTitle(file.filename());
     photo.setGoogleId(googleId);
@@ -150,21 +172,24 @@ public class Photo implements Serializable {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     Photo photo = (Photo) o;
-    return id == photo.id &&
+    return Objects.equals(id, photo.id) &&
              Objects.equals(title, photo.title) &&
-             Objects.equals(filePath, photo.filePath) &&
+             Objects.equals(compressedImageFilePath, photo.compressedImageFilePath) &&
+             Objects.equals(originalImageFilePath, photo.originalImageFilePath) &&
              Objects.equals(thumbnailFilePath, photo.thumbnailFilePath) &&
              Objects.equals(description, photo.description) &&
-             Objects.equals(base64SrcPhoto, photo.base64SrcPhoto) &&
-             Objects.equals(base64ThumbnailPhoto, photo.base64ThumbnailPhoto) &&
+             Objects.equals(base64CompressedImage, photo.base64CompressedImage) &&
+             Objects.equals(base64ThumbnailImage, photo.base64ThumbnailImage) &&
+             Objects.equals(googleId, photo.googleId) &&
              Objects.equals(contentType, photo.contentType) &&
+             Objects.equals(isPublic, photo.isPublic) &&
              Objects.equals(created, photo.created) &&
              Objects.equals(updated, photo.updated);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, title, filePath, thumbnailFilePath, description, base64SrcPhoto, base64ThumbnailPhoto, contentType, created, updated);
+    return Objects.hash(id, title, compressedImageFilePath, originalImageFilePath, thumbnailFilePath, description, base64CompressedImage, base64ThumbnailImage, googleId, contentType, isPublic, created, updated);
   }
 
   @Override
@@ -172,13 +197,15 @@ public class Photo implements Serializable {
     return "Photo{" +
              "id=" + id +
              ", title='" + title + '\'' +
-             ", filePath='" + filePath + '\'' +
+             ", compressedImageFilePath='" + compressedImageFilePath + '\'' +
+             ", originalImageFilePath='" + originalImageFilePath + '\'' +
              ", thumbnailFilePath='" + thumbnailFilePath + '\'' +
              ", description='" + description + '\'' +
-             ", base64SrcPhoto='" + base64SrcPhoto + '\'' +
-             ", base64ThumbnailPhoto='" + base64ThumbnailPhoto + '\'' +
+             ", base64CompressedImage='" + base64CompressedImage + '\'' +
+             ", base64ThumbnailImage='" + base64ThumbnailImage + '\'' +
              ", googleId='" + googleId + '\'' +
              ", contentType='" + contentType + '\'' +
+             ", isPublic=" + isPublic +
              ", created=" + created +
              ", updated=" + updated +
              '}';

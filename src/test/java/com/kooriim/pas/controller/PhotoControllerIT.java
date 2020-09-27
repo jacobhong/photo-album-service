@@ -87,18 +87,18 @@ public class PhotoControllerIT {
   @WithMockUser("anonymousUser")
   public void testGetPhotoById() {
     final var photo = createPhoto();
-    webTestClient.get().uri("/photo-album-service/photos/{id}", photo.getResponseBody().getId())
+    webTestClient.get().uri("/photo-album-service/photos/{id}?compressedImage=true", photo.getResponseBody().getId())
       .exchange()
       .expectStatus()
       .is2xxSuccessful()
       .expectBody(Photo.class)
-      .consumeWith(p -> assertNotNull(p.getResponseBody().getBase64SrcPhoto()));
+      .consumeWith(p -> assertNotNull(p.getResponseBody().getBase64CompressedImage()));
   }
 
   @Test
   @WithMockUser("anonymousUser")
   public void testGetPhotoById404() {
-    webTestClient.get().uri("/photo-album-service/photos/123")
+    webTestClient.get().uri("/photo-album-service/photos/123?compressedImage=true")
       .exchange()
       .expectStatus()
       .isNotFound();
@@ -113,19 +113,19 @@ public class PhotoControllerIT {
       .expectStatus()
       .is2xxSuccessful()
       .expectBodyList(Photo.class)
-      .consumeWith(p -> assertNotNull(p.getResponseBody().get(0).getBase64ThumbnailPhoto()));
+      .consumeWith(p -> assertNotNull(p.getResponseBody().get(0).getBase64ThumbnailImage()));
   }
 
   @Test
   @WithMockUser("anonymousUser")
   public void testGetPhotsoWithSrc() {
     final var photo = createPhoto();
-    webTestClient.get().uri("/photo-album-service/photos?srcImage=true&page=0&size=10")
+    webTestClient.get().uri("/photo-album-service/photos?compressedImage=true&page=0&size=10")
       .exchange()
       .expectStatus()
       .is2xxSuccessful()
       .expectBodyList(Photo.class)
-      .consumeWith(p -> assertNotNull(p.getResponseBody().get(0).getBase64SrcPhoto()));
+      .consumeWith(p -> assertNotNull(p.getResponseBody().get(0).getBase64CompressedImage()));
   }
 
 
@@ -173,7 +173,7 @@ public class PhotoControllerIT {
       .exchange()
       .expectStatus()
       .is2xxSuccessful().expectBody().returnResult();
-    webTestClient.get().uri("/photo-album-service/photos/{id}", photo.getResponseBody().getId())
+    webTestClient.get().uri("/photo-album-service/photos/{id}?compressedImage=true", photo.getResponseBody().getId())
       .exchange()
       .expectStatus()
       .is2xxSuccessful()

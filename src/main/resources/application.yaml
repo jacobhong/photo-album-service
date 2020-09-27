@@ -17,9 +17,9 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          introspection-uri: https://login.kooriim.com:8443/auth/realms/kooriim-fe/protocol/openid-connect/token/introspect
-          issuer-uri: https://login.kooriim.com:8443/auth/realms/kooriim-fe
-          jwk-set-uri: https://login.kooriim.com:8443/auth/realms/kooriim-fe/protocol/openid-connect/certs
+          introspection-uri: http://localhost:8081/auth/realms/kooriim-fe/protocol/openid-connect/token/introspect
+          issuer-uri: http://localhost:8081/auth/realms/kooriim-fe
+          jwk-set-uri: http://localhost:8081/auth/realms/kooriim-fe/protocol/openid-connect/certs
   servlet:
     multipart:
       max-file-size: -1

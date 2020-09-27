@@ -60,6 +60,7 @@ public class SecurityConfig {
       HttpMethod.OPTIONS.name(),
       HttpMethod.HEAD.name(),
       HttpMethod.POST.name(),
+      HttpMethod.PATCH.name(),
       HttpMethod.PUT.name(),
       HttpMethod.DELETE.name()));
     corsConfig.setAllowCredentials(true);
@@ -73,7 +74,7 @@ public class SecurityConfig {
 
   @Bean
   public SecurityWebFilterChain securitygWebFilterChain(
-    ServerHttpSecurity http) throws MalformedURLException, KeySourceException {
+    ServerHttpSecurity http) {
     http.cors().configurationSource(corsConfigurationSource());
     http.csrf().disable();
     http.authorizeExchange()

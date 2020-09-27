@@ -13,7 +13,8 @@ DROP TABLE IF EXISTS photo CASCADE ;
 CREATE TABLE IF NOT EXISTS photo (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    file_path VARCHAR(255) NOT NULL,
+    compressed_image_file_path VARCHAR(255) NOT NULL,
+    original_image_file_path VARCHAR(255) NOT NULL,
     thumbnail_file_path VARCHAR(255) NOT NULL,
     content_type VARCHAR(10) NOT NULL,
     description VARCHAR(255) DEFAULT NULL,
