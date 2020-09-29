@@ -17,7 +17,7 @@ CREATE TABLE  users (
 DROP TABLE IF EXISTS photo;
 CREATE TABLE  photo (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(30) NOT NULL,
+    title VARCHAR(50) NOT NULL,
     original_image_file_path VARCHAR(255) NOT NULL,
     compressed_image_file_path VARCHAR(255) NOT NULL,
     thumbnail_file_path VARCHAR(255) NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE  photo (
 DROP TABLE IF EXISTS album;
 CREATE TABLE  album (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(30) NOT NULL UNIQUE,
+    title VARCHAR(50) NOT NULL UNIQUE,
     description VARCHAR(50) DEFAULT NULL,
     google_id VARCHAR(255) NOT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

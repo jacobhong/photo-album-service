@@ -35,7 +35,7 @@ public class AlbumRepository {
       return result;
     }).doOnNext(result -> logger.info("Saved album {}", result.getId()))
              .doOnError(error -> logger.error("Failed to save album {}", error.getMessage()))
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Mono<Integer> savePhotoAlbum(Integer albumId, Integer photoId) {
@@ -55,7 +55,7 @@ public class AlbumRepository {
                photoId,
                albumId,
                error.getMessage()))
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Flux<Album> findByGoogleId(String googleId, Pageable pageable) {
@@ -66,7 +66,7 @@ public class AlbumRepository {
                                                 .setMaxResults(pageable.getPageSize()).getResultList()))
              .doOnNext(result -> logger.info("Found album by googleId {}", ((Album)result).getId()))
              .doOnError(error -> logger.error("Failed to save album {}", ((Throwable)error).getMessage()))
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Mono<Album> getAlbumById(Integer id) {
@@ -77,7 +77,7 @@ public class AlbumRepository {
              .doOnNext(result -> logger.info("Found album by albumId {}", result.getId()))
              .doOnError(error -> logger.error("Failed to get album {}", error.getMessage()))
              .onErrorResume(e -> Mono.empty())
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Mono<Void> deleteById(Integer id) {
@@ -94,7 +94,7 @@ public class AlbumRepository {
     }).doOnNext(result -> logger.info("Deleted album by Id {}", id.toString()))
              .doOnError(error -> logger.error("Error deleting by album id {}", error.getMessage()))
              .then()
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
 

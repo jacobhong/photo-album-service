@@ -129,7 +129,7 @@ public class PhotoService {
     }).doOnNext(result -> logger.info("fetched thumbnail image from s3 {}", result.getThumbnailFilePath()))
              .doOnError(error -> logger.error("Error setting base64 thumbnail {} for photoId {}", error.getMessage(), photo.getId()))
              .onErrorResume(p -> Mono.empty())
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Mono<Photo> setBase64CompressedImage(Photo photo) {
@@ -148,7 +148,7 @@ public class PhotoService {
     }).doOnNext(result -> logger.info("fetched compressed image from s3 {}", result.getCompressedImageFilePath()))
              .doOnError(error -> logger.error("Error setting setBase64CompressedImage {} for photoId {}", error.getMessage(), photo.getId()))
              .onErrorResume(p -> Mono.empty())
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Mono<Photo> setBase64OriginalImage(Photo photo) {
@@ -167,7 +167,7 @@ public class PhotoService {
     }).doOnNext(result -> logger.info("fetched original image from s3 {}", result.getCompressedImageFilePath()))
              .doOnError(error -> logger.error("Error setting setBase64CompressedImage {} for photoId {}", error.getMessage(), photo.getId()))
              .onErrorResume(p -> Mono.empty())
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Mono<Void> patchPhotos(List<Photo> photos) {
@@ -228,11 +228,11 @@ public class PhotoService {
     image = Thumbnails.of(image)
               .size(Math.round(width), Math.round(height))
               .asBufferedImage();
-    final var byteOutputStream = new ByteArrayOutputStream();
+     var byteOutputStream = new ByteArrayOutputStream();
     ImageIO.setUseCache(false);
-    final var writers = ImageIO.getImageWritersByFormatName(contentType);
-    final var writer = writers.next();
-    final var ios = ImageIO.createImageOutputStream(byteOutputStream);
+     var writers = ImageIO.getImageWritersByFormatName(contentType);
+     var writer = writers.next();
+     var ios = ImageIO.createImageOutputStream(byteOutputStream);
     writer.setOutput(ios);
     final var param = writer.getDefaultWriteParam();
 
@@ -244,6 +244,11 @@ public class PhotoService {
     byteOutputStream.close();
     ios.close();
     writer.dispose();
+    image = null;
+    byteOutputStream = null;
+    writer = null;
+    writer = null;
+    ios = null;
     return compressedImageResult;
   }
 
@@ -254,17 +259,17 @@ public class PhotoService {
              + StringUtils.newStringUtf8(Base64.getEncoder().encode(bytes));
   }
 
-  private Mono<byte[]> compressImageS3Push(FilePart file, String contentType) {
+  private Mono<FilePart> compressImageS3Push(FilePart file, String contentType) {
     return Mono.fromCallable(() -> {
-      final var tmpDir = new File(imgDir);
+      var tmpDir = new File(imgDir);
       if (!tmpDir.exists()) {
         tmpDir.mkdir();
       }
       var tempFile = File.createTempFile(file.filename(), contentType, new File(imgDir + "/"));
       file.transferTo(tempFile);
       var image = ImageIO.read(tempFile);
-      final byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
-      final byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
+      byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
+      byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
       logger.info("pushing thumbnail to s3");
 //      final var thumbnailPath = file.filename().substring(0, file.filename().lastIndexOf(".")) + ".thumbnail." + contentType;
       /**
@@ -290,17 +295,22 @@ public class PhotoService {
                               .key("original." + file.filename())
                               .build(), RequestBody.fromFile(tempFile));
       tempFile.delete();
-      return compressedImageResult;
+      tmpDir = null;
+      image = null;
+      compressedImageResult = null;
+      compressedThumbnailResult = null;
+      tempFile = null;
+      return file;
     }).doOnSuccess(result -> logger.info("Compressed and pushed image to s3"))
              .doOnError(error -> logger.error("Failed compressImageS3Push {}", error.getMessage()))
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   private Mono<String> getUserGoogleId() {
     return ReactiveSecurityContextHolder
              .getContext()
              .doOnError(error -> logger.error("error authorizing user context {}", error))
-             .publishOn(Schedulers.elastic())
+             .publishOn(Schedulers.boundedElastic())
              .map(SecurityContext::getAuthentication)
              .doOnError(error -> logger.error("error authorizing user auth {}", error))
              .map(Authentication::getName)

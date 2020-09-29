@@ -33,7 +33,7 @@ public class PhotoRepository {
              .doOnNext(photo -> logger.info("Got photo {}", photo.getTitle()))
              .doOnError(error -> logger.error("Error getting photo {}", error.getMessage()))
              .onErrorResume(e -> Mono.empty())
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Flux<Photo> getPhotosByAlbumId(Integer albumId, Pageable pageable) {
@@ -44,7 +44,7 @@ public class PhotoRepository {
                                                 .setMaxResults(pageable.getPageSize()).getResultList()))
              .doOnNext(result -> logger.info("Got photos by albumId {}", albumId))
              .doOnError(error -> logger.error("Error getting photos by albumId {}", ((Throwable)error).getMessage()))
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Flux<Photo> getPhotosByGoogleId(String googleId, Pageable pageable) {
@@ -55,7 +55,7 @@ public class PhotoRepository {
                                                 .setMaxResults(pageable.getPageSize()).getResultList()))
              .doOnNext(result -> logger.info("Got photos by googleId {}", googleId))
              .doOnError(error -> logger.error("Error getting photos by googleId {}", ((Throwable)error).getMessage()))
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Flux<Photo> getPhotosByIds(List<Integer> ids) {
@@ -65,14 +65,14 @@ public class PhotoRepository {
                                                 .getResultList()))
              .doOnNext(result -> logger.info("Got photoById {}", ids.toString()))
              .doOnError(error -> logger.error("Error getting photosById {}", ((Throwable)error).getMessage()))
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Flux<Photo> getPhotos() {
     return Flux.defer(() -> Flux.fromIterable(entityManager
                                                 .createNativeQuery("SELECT * FROM photo", Photo.class)
                                                 .getResultList()))
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Mono<Void> deleteByPhotoIds(List<Integer> ids) {
@@ -89,7 +89,7 @@ public class PhotoRepository {
     }).doOnNext(result -> logger.info("Deleted photosById {}", ids.toString()))
              .doOnError(error -> logger.error("Error deleting photosByIds {}", error))
              .then()
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
   public Mono<Integer> deleteAllPhotosByAlbumId(Integer albumId) {
@@ -105,7 +105,7 @@ public class PhotoRepository {
       return result;
     }).doOnNext(result -> logger.info("Deleted all photos by albumId {}", albumId))
              .doOnError(error -> logger.error("Error deleting photos {} ", error.getMessage()))
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 
 
@@ -120,7 +120,7 @@ public class PhotoRepository {
       return result;
     }).doOnNext(result -> logger.info("Saved photo {}", result.getTitle()))
              .doOnError(error -> logger.error("Error saving photo {}", error.getMessage()))
-             .subscribeOn(Schedulers.elastic());
+             .subscribeOn(Schedulers.boundedElastic());
   }
 }
 

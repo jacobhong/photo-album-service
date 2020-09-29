@@ -21,7 +21,7 @@ public class Photo implements Serializable {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Integer id;
 
-  @Size(max=30)
+  @Size(max=50)
   private String title;
   @Column(name = "compressed_image_file_path")
   private String compressedImageFilePath;
