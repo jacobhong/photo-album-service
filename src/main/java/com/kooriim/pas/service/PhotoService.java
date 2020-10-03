@@ -202,7 +202,7 @@ public class PhotoService {
 
   private Function<String, Mono<? extends Photo>> compressAndSaveImage(FilePart file) {
     return name -> {
-      final var contentType = file.filename()
+      final var contentType = file.filename().toLowerCase()
                                 .endsWith((".png")) ? "png" : "jpg";
       final var fileName = file.filename();
       final var thumbnailPath = fileName.substring(0, fileName.lastIndexOf(".")) + ".thumbnail." + contentType;
