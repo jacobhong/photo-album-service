@@ -16,7 +16,7 @@ services:
     env_file:
       - ./docker/photo-album-service.env
     ports:
-      - "8080"
+      - "8080:8080"
     networks:
       - auth-network
     volumes:
@@ -25,14 +25,15 @@ services:
     image: mariadb:10.4
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: password131
+      MYSQL_ROOT_PASSWORD: pw131
       MYSQL_DATABASE: pas
       MYSQL_USER: user131
-      MYSQL_PASSWORD: password131
+      MYSQL_PASSWORD: pw131
     ports:
-      - "3306:3306"
+      - "3303:3306"
     volumes:
       - ./docker/mysql/mysql:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
       - ./docker/sql:/docker-entrypoint-initdb.d
     networks:
       - auth-network
