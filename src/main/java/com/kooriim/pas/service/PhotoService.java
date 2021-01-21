@@ -156,7 +156,7 @@ public class PhotoService {
       final byte[] bytes;
       var s3Object = awsS3Client.getObject(GetObjectRequest
                                              .builder()
-                                             .key(photo
+                                             .key("original." + photo
                                                     .getTitle())
                                              .bucket(S3_BUCKET_NAME)
                                              .build());
@@ -164,8 +164,8 @@ public class PhotoService {
       s3Object.close();
       photo.setBase64OriginalImage(generateBase64Image(photo, bytes));
       return photo;
-    }).doOnNext(result -> logger.info("fetched original image from s3 {}", result.getCompressedImageFilePath()))
-             .doOnError(error -> logger.error("Error setting setBase64CompressedImage {} for photoId {}", error.getMessage(), photo.getId()))
+    }).doOnNext(result -> logger.info("fetched original image from s3 {}", result.getOriginalImageFilePath()))
+             .doOnError(error -> logger.error("Error setting setBase64OriginalImage {} for photoId {}", error.getMessage(), photo.getId()))
              .onErrorResume(p -> Mono.empty())
              .subscribeOn(Schedulers.boundedElastic());
   }

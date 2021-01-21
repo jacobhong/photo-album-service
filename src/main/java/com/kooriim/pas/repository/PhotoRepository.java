@@ -49,7 +49,7 @@ public class PhotoRepository {
 
   public Flux<Photo> getPhotosByGoogleId(String googleId, Pageable pageable) {
     return Flux.defer(() -> Flux.fromIterable(entityManager
-                                                .createNativeQuery("SELECT * FROM photo WHERE google_id=:google_id", Photo.class)
+                                                .createNativeQuery("SELECT * FROM photo WHERE google_id=:google_id order by created desc", Photo.class)
                                                 .setParameter("google_id", googleId)
                                                 .setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
                                                 .setMaxResults(pageable.getPageSize()).getResultList()))
