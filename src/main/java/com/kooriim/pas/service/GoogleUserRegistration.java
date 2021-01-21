@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 @Service
-public class GoogleUserRegistration  {
+public class GoogleUserRegistration {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   @Autowired
@@ -27,11 +27,11 @@ public class GoogleUserRegistration  {
 
   private void updateUser(GoogleOidUser googleOidUserInfo) {
     logger.info("looking for user by email {}", googleOidUserInfo);
-    final var existingGoogleUser = userRepository.findByEmail(googleOidUserInfo.getEmail());
-    logger.info("found user {}", existingGoogleUser.getEmail());
-    if(existingGoogleUser == null) {
-      userRepository.save(googleOidUserInfo);
-      logger.info("saved google user {}", googleOidUserInfo.getName());
-    }
+    userRepository.findByEmail(googleOidUserInfo.getEmail())
+      .ifPresentOrElse(existingGoogleUser -> logger.info("found user {}", existingGoogleUser.getEmail()),
+        () -> {
+          userRepository.save(googleOidUserInfo);
+          logger.info("saved new google user {}", googleOidUserInfo.getName());
+        });
   }
 }

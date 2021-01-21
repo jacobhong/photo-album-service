@@ -27,7 +27,7 @@ public class PublicGalleryController {
   public Mono<ServerResponse> getPhotos(ServerRequest serverRequest) {
     ReactiveSecurityContextHolder.getContext()
       .map(SecurityContext::getAuthentication)
-      .map(Authentication::getName).doOnNext(p -> logger.info(p)).subscribeOn(Schedulers.elastic()).subscribe();
+      .map(Authentication::getName).doOnNext(p -> logger.info(p)).subscribeOn(Schedulers.boundedElastic()).subscribe();
     return ServerResponse.ok().body(Mono.just("hey"), String.class);
   }
 

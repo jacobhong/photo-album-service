@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -53,10 +54,18 @@ public class SecurityConfig {
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration corsConfig = new CorsConfiguration();
     corsConfig.applyPermitDefaultValues();
-    corsConfig.addAllowedMethod("OPTIONS");
-    corsConfig.addAllowedMethod("PATCH");
-    corsConfig.addAllowedMethod("DELETE");
+    corsConfig.addAllowedHeader("*");
+    corsConfig.setAllowedMethods(Arrays.asList(
+      HttpMethod.GET.name(),
+      HttpMethod.OPTIONS.name(),
+      HttpMethod.HEAD.name(),
+      HttpMethod.POST.name(),
+      HttpMethod.PATCH.name(),
+      HttpMethod.PUT.name(),
+      HttpMethod.DELETE.name()));
+    corsConfig.setAllowCredentials(true);
     corsConfig.setAllowedOrigins(Arrays.asList(origin));
+    corsConfig.addExposedHeader("Access-Control-Allow-Origin");
     UrlBasedCorsConfigurationSource source =
       new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", corsConfig);
@@ -65,14 +74,14 @@ public class SecurityConfig {
 
   @Bean
   public SecurityWebFilterChain securitygWebFilterChain(
-    ServerHttpSecurity http) throws MalformedURLException, KeySourceException {
+    ServerHttpSecurity http) {
     http.cors().configurationSource(corsConfigurationSource());
     http.csrf().disable();
     http.authorizeExchange()
       .pathMatchers("/actuator/*").permitAll()
-      .pathMatchers("/photos/**").hasAnyAuthority("kooriim-fe", "kooriim-mobile")
-      .pathMatchers("/albums/**").hasAnyAuthority("kooriim-fe", "kooriim-mobile")
-      .pathMatchers("/users/**").hasAnyAuthority("kooriim-fe", "kooriim-mobile")
+      .pathMatchers("/photos/**").hasAnyAuthority("kooriim-fe")
+      .pathMatchers("/albums/**").hasAnyAuthority("kooriim-fe")
+      .pathMatchers("/users/**").hasAnyAuthority("kooriim-fe")
       .anyExchange()
       .authenticated()
       .and()

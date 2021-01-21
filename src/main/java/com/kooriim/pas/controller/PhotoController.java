@@ -34,9 +34,9 @@
 //
 //  @RequestMapping(value = "/{id}")
 //  public ResponseEntity<Photo> getPhotoById(@PathVariable("id") Integer photoId,
-//                                            @RequestParam(defaultValue = "false", value = "srcImage") Boolean setSrcImage) {
+//                                            @RequestParam(defaultValue = "false", value = "compressedImage") Boolean setcompressedImage) {
 //    logger.info("getting photo by id: {}", photoId);
-//    final var photo = photoService.getPhotoById(photoId, setSrcImage);
+//    final var photo = photoService.getPhotoById(photoId, setcompressedImage);
 //
 //    ResponseEntity response;
 //    if (photo.isPresent()) {

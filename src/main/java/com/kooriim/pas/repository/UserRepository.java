@@ -4,7 +4,9 @@ import com.kooriim.pas.domain.GoogleOidUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface UserRepository extends JpaRepository<GoogleOidUser, Integer> {
-  GoogleOidUser findByEmail(String email);
+  Optional<GoogleOidUser> findByEmail(String email);
 }

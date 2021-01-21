@@ -34,7 +34,7 @@ public class PhotoHandler {
     }
     final var queryParams = serverRequest.queryParams();
     final var pageable = PageRequest.of(Integer.valueOf(page), Integer.valueOf(size));
-    return photoService.getPhotosByQueryParams(queryParams, pageable)
+    return photoService.getPhotosByQueryParams(queryParams.toSingleValueMap(), pageable)
              .collectList()
              .flatMap(photos -> ServerResponse.ok().bodyValue(photos));
   }
@@ -42,7 +42,8 @@ public class PhotoHandler {
   public Mono<ServerResponse> getPhotoById(ServerRequest serverRequest) {
     logger.info("getting photo by id: {}", serverRequest.pathVariable("id"));
     return photoService
-             .getPhotoById(Integer.valueOf(serverRequest.pathVariable("id")), Boolean.TRUE)
+             .getPhotoById(Integer.valueOf(serverRequest.pathVariable("id")),
+               serverRequest.queryParams().toSingleValueMap())
              .flatMap(p -> ServerResponse.ok().bodyValue(p))
              .switchIfEmpty(ServerResponse.notFound().build());
   }
@@ -75,11 +76,12 @@ public class PhotoHandler {
   }
 
   public Mono<ServerResponse> create(ServerRequest serverRequest) {
-    logger.info("creating photo with request {}", serverRequest);
-    logger.info("creating photo with request {}", serverRequest.formData().block().toSingleValueMap());
+    logger.info("creating photo with request {}", serverRequest.headers());
 
     return serverRequest
              .multipartData()
+             .doOnNext(data -> logger.info("got multi part data " + data.toSingleValueMap()))
+             .filter(data -> data.toSingleValueMap().get("file") != null)
              .map(data -> data.toSingleValueMap().get("file")).cast(FilePart.class)
              .flatMap(file -> photoService.savePhoto(file)
                                 .flatMap(photo -> ServerResponse.ok().bodyValue(photo)));
