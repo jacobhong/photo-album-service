@@ -62,4 +62,9 @@ create new role: kooriim-fe
 -in roles - default roles - add koorim-fe
 ```
 
+
+docker exec -it {contaierID} bash
+cd keycloak/bin
+./kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user admin
+./kcadm.sh update realms/master -s sslRequired=NONE
 (when update cert do it on aws then commit to git the new keys then recreate keystore in intellij)
