@@ -1,0 +1,588 @@
+[33mcommit d342ddaab636d7ef94bbe0f1928b19139828dca2[m[33m ([m[1;36mHEAD -> [m[1;32mprod[m[33m)[m
+Merge: 165e3d3 9a99c71
+Author: root <root@ip-172-31-11-152.us-west-1.compute.internal>
+Date:   Thu Jan 21 01:31:34 2021 +0000
+
+    Merge branch 'master' into prod
+
+[33mcommit 9a99c7160a11e8690df594d32bfa46f2216e9e2b[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Wed Jan 20 17:05:42 2021 -0800
+
+    wat
+
+[33mcommit 165e3d38c653c8ba60b177a542562955a8c1861b[m
+Author: root <root@ip-172-31-11-152.us-west-1.compute.internal>
+Date:   Thu Jan 21 01:00:42 2021 +0000
+
+    prod diff
+
+[33mcommit 8423033ccf3cec06abc42727662a4a4c86ce79c5[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Fri Oct 2 17:04:57 2020 -0700
+
+     fix file name
+
+[33mcommit b87b776291edaec35e92303eb9807fa7b2c45077[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Sep 28 20:22:31 2020 -0700
+
+     update constraints on photo
+
+[33mcommit ec4d0e10ebff0bd94f239b9b6bd107c1daf172cf[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Sep 27 12:13:48 2020 -0700
+
+    refactor
+
+[33mcommit da66d08614ea5d33fe59af801e14b2643c860ef9[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Tue Sep 15 21:27:24 2020 -0700
+
+    create ami
+
+[33mcommit 9b4c5d815f0b933af96820f3bcb9edab3c671962[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Sep 12 13:14:01 2020 -0700
+
+    get everyting working on fresh aws setup
+
+[33mcommit 88a8a6c1c8252050cc0f29af40706c52a05e6288[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Sep 12 11:17:39 2020 -0700
+
+    update conf
+
+[33mcommit 8035b5413516372583b27202a1f67e595a1d4aea[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Sep 7 11:27:02 2020 -0700
+
+    file changes
+
+[33mcommit 58313fc56fbcbc47d2a52499f36716e70ed0d1ff[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Sep 7 08:18:44 2020 -0700
+
+    update nginx
+
+[33mcommit a2d5e90b086c121761910e759d3dd3fbc2bae248[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Sep 7 08:18:13 2020 -0700
+
+    update nginx
+
+[33mcommit 28e1d282beddd2fc6eda11ec7b41762d0e556921[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Sep 5 10:30:42 2020 -0700
+
+    debug logs
+
+[33mcommit f76773ff4be6182cc1e7d81e25ae577b699213fe[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Tue Sep 1 20:11:23 2020 -0700
+
+    add mobile auth
+
+[33mcommit fb045ec0f17f1b073d83c204c0e45f0cb26800e4[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Aug 16 10:09:06 2020 -0700
+
+    fkn keycloak again
+
+[33mcommit 51d31e1ae438847981c02422ca6714b21435310e[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Aug 15 19:02:58 2020 -0700
+
+    fix keycloak ssl
+
+[33mcommit 516d84a2bb601f83ff4625c1e4f7dcfcfe76e214[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Aug 15 18:43:44 2020 -0700
+
+    confg
+
+[33mcommit adc91bb0bd4ee4bd0e8089db19da1233c937239c[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Aug 15 11:15:30 2020 -0700
+
+    update conf
+
+[33mcommit 0c0c01442b418265b45f6e3e13ca0548d3076e18[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Aug 15 11:04:06 2020 -0700
+
+    nginx
+
+[33mcommit 895962d7460aa4e56faf16c5bf39cb4165e60939[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Aug 15 10:32:38 2020 -0700
+
+    update config
+
+[33mcommit e1698736ebe3c73f8765c56151ce5d2968bfa14d[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Aug 15 10:19:29 2020 -0700
+
+    update nginx
+
+[33mcommit c8ab434f2f35172d87d98108c9095ad7a70e48b1[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Fri Aug 14 23:35:07 2020 -0700
+
+     remove ssl
+
+[33mcommit 7098ae86e7e94d7f8697c4093b6290c053886ced[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Fri Aug 14 22:54:43 2020 -0700
+
+    add nginx
+
+[33mcommit 9d129e26612c02f2ecfd7ab89351de491ed544fa[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Aug 8 19:49:36 2020 -0700
+
+    update key
+
+[33mcommit 6b8c7fd5aa0e2d1a268837a6849ae157aac83e33[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Aug 8 19:10:49 2020 -0700
+
+    clean up
+
+[33mcommit 6a016c3f64a0fb502d3afe6f6b823dafae0459ac[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Aug 8 17:35:24 2020 -0700
+
+    update keystore
+
+[33mcommit 3f1cd0baa3c1dd3dc23d05f8a7fa733b22105782[m
+Author: root <root@ip-172-31-14-143.us-west-1.compute.internal>
+Date:   Sun Aug 9 00:25:29 2020 +0000
+
+    update cert again
+
+[33mcommit 2210ab6a8ddea097c4c01363659f1e5a80f4cd37[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Fri Jul 31 15:07:22 2020 -0700
+
+    ignore error from fetch s3
+
+[33mcommit d4558228770be78bb51c4e8ee85fb64c2bf27343[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Jul 30 19:32:47 2020 -0700
+
+    update test
+
+[33mcommit b0017e1662c74df3b562434b8cc32ff5ce564ece[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Wed Jul 29 20:33:38 2020 -0700
+
+    fix test ignore 2
+
+[33mcommit 24038b14bf814c9eb6286ce21a3b24725be5f3a6[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Wed Jul 29 15:23:36 2020 -0700
+
+    reactive tests
+
+[33mcommit 382c7d8ecd08263589744bc5891da2b4c04cccc0[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Jul 16 22:30:08 2020 -0700
+
+    add album delete
+
+[33mcommit 60cdcac9bd747383150dd374278aef81be16c306[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Jul 16 09:58:13 2020 -0700
+
+     fix delete
+
+[33mcommit 3136e4d0f7f57dc2616e473e737deba7b5cd9b5f[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Wed Jul 15 11:46:01 2020 -0700
+
+    close stream
+
+[33mcommit 746fe748993eb7f89d9bf9d830f413761778baa8[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Tue Jul 14 22:27:55 2020 -0700
+
+     fix s3 key
+
+[33mcommit e2aefc6f6c7908d1b0debe92dcea0d12e8a282cb[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Tue Jul 14 21:04:14 2020 -0700
+
+    update cors
+
+[33mcommit cca8c8bd1d4ebf38ebedd1cf01c8064b7bf2ce97[m
+Author: root <root@ip-172-31-14-143.us-west-1.compute.internal>
+Date:   Tue Jul 14 06:03:38 2020 +0000
+
+    update certs
+
+[33mcommit 977bd2b769fcbf3f852025b5896ea257357f7835[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Jul 13 22:17:30 2020 -0700
+
+    refactor albums to reactive and add logging/error handling
+
+[33mcommit 90b1bba6941d91ac3b1f3f5db8d47c7adb0b1ffb[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Fri Jul 10 20:38:16 2020 -0700
+
+    refactor to use s3 and mono flux
+
+[33mcommit 970224b7234d252ba4744cf2c04ea0f38d513ab3[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Wed Jul 8 23:47:54 2020 -0700
+
+    before add reactive jdbc
+
+[33mcommit b3c386ba846d83285de0da7e14939a9de220e6c9[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Fri May 29 21:00:48 2020 -0700
+
+    allow png files to save
+
+[33mcommit aee6ca2395c625b698b33161d7f64e059802d621[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu May 21 20:06:55 2020 -0700
+
+    settle on compression size
+
+[33mcommit b18301c7273baa18524c73c023b3269ada28b2da[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat May 9 20:03:17 2020 -0700
+
+    update compression
+
+[33mcommit c89307f170914b89d494db8b9496ebe768ec72ee[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Fri May 8 23:48:47 2020 -0700
+
+    resize images to 1080p
+
+[33mcommit fe76e03b44bdfe20fdd0bf75b46a5f28549e2932[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Apr 13 13:20:44 2020 -0700
+
+    forget about public gallery
+
+[33mcommit 2add1de052b81bd97b660bbb1f58c071b03a58ff[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 17:34:42 2020 -0700
+
+    edit
+
+[33mcommit 70560f567579f7347e60c667e30f37be4ffb3325[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 17:30:34 2020 -0700
+
+    edit
+
+[33mcommit 2169ace8cf3da3b16682a740d9b201b1e9db25de[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 17:16:50 2020 -0700
+
+    edit
+
+[33mcommit 558b4e5dae2231b010806ab8fa75468af09c9cd0[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 17:07:57 2020 -0700
+
+    edit
+
+[33mcommit 3b0eefe82ba832c6d43be36a2aed8e79f24563dd[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 16:54:26 2020 -0700
+
+    edit
+
+[33mcommit 35a862f3d7ee8bb52eb853f393a04207c6bb15e1[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 16:37:47 2020 -0700
+
+    update ssl
+
+[33mcommit 7e68f505e030c56eb04bf4b0eb0f276299da215b[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 16:32:39 2020 -0700
+
+    update ssl
+
+[33mcommit 572a3bffdece212ae2de5bcd57b1546e7cac482c[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 16:21:36 2020 -0700
+
+    disable ssl
+
+[33mcommit 82910b20493622b88fb79eb7abc803f1b81e16cd[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 16:06:08 2020 -0700
+
+    awefew
+
+[33mcommit b2849ff9d3f7c8689085e4cd9be8be51510e57a8[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 15:51:00 2020 -0700
+
+     update readme
+
+[33mcommit d6c45c9bf70bda409b585d1bd1c9e59025292f99[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 15:45:46 2020 -0700
+
+    update ssl
+
+[33mcommit ea6a4d54843a039fa6671e57dbf332a61385cd8b[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 15:14:40 2020 -0700
+
+    update ssl
+
+[33mcommit 06c4d202dc6c109b5c1e22235cd6610e21988de0[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 23 15:09:29 2020 -0700
+
+    remove ssl
+
+[33mcommit b43105571e2a1dccb144bc2066dd53e905cde745[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Mar 21 22:50:29 2020 -0700
+
+    fix integration test
+
+[33mcommit 360e230c46cd384eacce6d506c9deaabad64121a[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Mar 21 22:38:29 2020 -0700
+
+    fix paginable
+
+[33mcommit 2a24301e74432ddc802bbc96ff84d948830d584f[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Mar 21 22:15:03 2020 -0700
+
+    add public photos
+
+[33mcommit 20ec27b6e3652a7efb12f0bbf55488b535d421cb[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Tue Mar 3 21:58:05 2020 -0800
+
+     remove parallel stream
+
+[33mcommit 51c8fe1346b7d45220d45debc579e8d000759e40[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Tue Mar 3 20:25:18 2020 -0800
+
+    make photos paralellstream
+
+[33mcommit 36144fc77753e5ab5d702dd42fee5dcc32478f6d[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 2 23:07:31 2020 -0800
+
+     add volume for images
+
+[33mcommit 2873eb0acb8ba559f9d35fd3e5bca81ffa439caa[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Mar 2 22:58:56 2020 -0800
+
+    add pagination
+
+[33mcommit f16ec059e126c3d1d50337e7f4a5be6cb5058b69[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Mar 1 12:49:20 2020 -0800
+
+     fix path
+
+[33mcommit 0d592f1868b7be57c472a09f697d18c795ceccc3[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Mar 1 12:33:53 2020 -0800
+
+    create imdir if not exist
+
+[33mcommit 4d07e50bbb8c19968afac3ad6a3172256e84e17a[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Mar 1 00:10:49 2020 -0800
+
+    add album edit
+
+[33mcommit c7853abb8a106c28f5affa3c32ef7550b157610d[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Feb 27 23:41:48 2020 -0800
+
+    update album feature
+
+[33mcommit 555bf6c544360e58afe8a2dcb698fcde564a53e2[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Feb 27 18:12:02 2020 -0800
+
+    refactor tests, first tdd!
+
+[33mcommit 2417998a1baa2e38f33643f2cc72cf039eef7d5e[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Feb 23 20:45:51 2020 -0800
+
+    remove build dir
+
+[33mcommit bc5756433ef29c50b13fb3ba00c61aa985ca8ce6[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Feb 23 17:42:53 2020 -0800
+
+     remove cors settings
+
+[33mcommit ca4bfb8233e56d69c36e337ed5735e33e7bffffc[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Feb 23 17:40:13 2020 -0800
+
+    fix cors
+
+[33mcommit b51ea28303e86e28b7d7b2aed10dd7bb2efb282b[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Feb 23 17:06:38 2020 -0800
+
+    edit docker env
+
+[33mcommit ffe5edd438ee4aaf2e400e56c7704a62509f4678[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Feb 23 17:04:25 2020 -0800
+
+    edit docker env
+
+[33mcommit 298dfca3257c7600254bbcb2721ab7af7a6e638d[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Feb 23 16:56:50 2020 -0800
+
+    remove build files
+
+[33mcommit 07bb7d693225ea64f2d734263de5cf99a0176fb2[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sun Feb 23 10:15:33 2020 -0800
+
+    fix tests
+
+[33mcommit ac7456dafee53be9e9d706617863c66e161b8ca5[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Fri Feb 14 20:00:11 2020 -0800
+
+    change settings
+
+[33mcommit bc508a2e35b342378944a3d56f9d871a3a439957[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Feb 13 23:29:50 2020 -0800
+
+    docker compose edit
+
+[33mcommit b2c8c856785409d9554956aec90163eefb39a11f[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Feb 13 23:27:41 2020 -0800
+
+    docker compose edit
+
+[33mcommit 6655fff3f31dcb24b4d2781d52a0b59e97570d00[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Feb 13 23:19:22 2020 -0800
+
+    docker compose edit
+
+[33mcommit 20a0c6a099861dedd892f552072113e0de8cb089[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Feb 13 23:14:53 2020 -0800
+
+    docker compose edit
+
+[33mcommit 17a8bf7115de83ab2a23a5474a0c04bf1fa385f8[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Feb 13 23:08:16 2020 -0800
+
+    change permissions
+
+[33mcommit f6e1a07dad810bf9c997ee5a21e308ed70442069[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Feb 13 23:01:51 2020 -0800
+
+    change permissions
+
+[33mcommit 4b2ce003d41bce31072504f384f144b9d951e9b9[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Feb 13 17:43:23 2020 -0800
+
+     fix albums
+
+[33mcommit cca156516152ba6c75c47c338d416f882c624723[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Thu Feb 13 09:10:02 2020 -0800
+
+     add album by id
+
+[33mcommit 8dc5b23ab98c2d909de77e5072c7aa35abdf95ae[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Wed Feb 12 19:50:45 2020 -0800
+
+    change conf
+
+[33mcommit 65896e2d40706dbe25c11f452a2a95a3d67dc566[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Mon Feb 10 21:59:28 2020 -0800
+
+    add spring security / oauth / sso
+
+[33mcommit f46d0bb6768bfcd498ed78b5cd3de205e9b222b4[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Feb 8 15:48:20 2020 -0800
+
+    edit
+
+[33mcommit a51dd39df0cec5fc696b86042cb94c4732288e67[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Feb 8 15:42:20 2020 -0800
+
+    edit
+
+[33mcommit 1550096aeb5ac5517b45de389cbcb3ccceba950b[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Feb 8 15:36:48 2020 -0800
+
+    edit docker
+
+[33mcommit 5bbc68d0a9ab59a78cb5be828c1e511a3447acd4[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Feb 8 15:33:40 2020 -0800
+
+    edit docker compose
+
+[33mcommit 82696d66c48c101c314d425cd6906273ded33aa4[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Feb 8 15:16:04 2020 -0800
+
+    change docker image
+
+[33mcommit abf42f0867ab7e19acaeaaa2ffc4e8d0d1c08c89[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Feb 8 15:11:08 2020 -0800
+
+    fix env
+
+[33mcommit 4193bae7361f39051a6b8f4668119cbb98106285[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Feb 8 15:10:21 2020 -0800
+
+    add docker setup
+
+[33mcommit cfd6944b9c8f205c266c41497ffbe05696e60de4[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Fri Feb 7 22:53:28 2020 -0800
+
+    add user to photo and album
+
+[33mcommit 2bd136c4af28379f4956afa03c187cb59279cba5[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Fri Feb 7 19:26:02 2020 -0800
+
+    add sso
+
+[33mcommit 6054a450cdac69e59039a4419a9065d40054521b[m
+Author: jacob.hong <jacob.hong@gmail.com>
+Date:   Sat Feb 1 20:05:58 2020 -0800
+
+    rename project
