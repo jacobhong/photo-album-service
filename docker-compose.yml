@@ -15,6 +15,9 @@ services:
     image: 500536527570.dkr.ecr.us-west-1.amazonaws.com/photo-album-service:latest
     env_file:
       - ./docker/photo-album-service.env
+    environment:
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
     ports:
       - "8080:8080"
     networks:
