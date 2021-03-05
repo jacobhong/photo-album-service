@@ -34,7 +34,7 @@ public class PhotoHandler {
     }
     final var queryParams = serverRequest.queryParams();
     final var pageable = PageRequest.of(Integer.valueOf(page), Integer.valueOf(size));
-    return photoService.getPhotosByQueryParams(queryParams.toSingleValueMap(), pageable)
+    return photoService.getPhotos(queryParams.toSingleValueMap(), pageable)
              .collectList()
              .flatMap(photos -> ServerResponse.ok().bodyValue(photos));
   }

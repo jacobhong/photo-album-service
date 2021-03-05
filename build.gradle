@@ -25,6 +25,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.security:spring-security-oauth2-jose'
 	implementation 'org.springframework.security:spring-security-oauth2-resource-server'
+	compile 'com.google.photos.library:google-photos-library-client:1.6.0'
 
 	implementation platform('software.amazon.awssdk:bom:2.13.46')
 	implementation 'software.amazon.awssdk:s3'

@@ -54,7 +54,7 @@ services:
       DB_USER: keycloak131
       DB_VENDOR: mariadb
       DB_SCHEMA: keycloak
-    #      KEYCLOAK_LOGLEVEL: DEBUG
+      KEYCLOAK_LOGLEVEL: DEBUG
     volumes:
       - ./docker/keystore/keycloak:/etc/x509/https
     ports:

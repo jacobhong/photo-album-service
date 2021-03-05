@@ -67,9 +67,9 @@ public class PhotoService {
              });
   }
 
-  public Flux<Photo> getPhotosByQueryParams(Map<String, String> params, Pageable pageable) {
+  public Flux<Photo> getPhotos(Map<String, String> params, Pageable pageable) {
     return getUserGoogleId()
-             .flatMapMany(name -> getPhotosSetBase64(params, pageable, name));
+             .flatMapMany(name -> getPhotos(params, pageable, name));
   }
 
   public Mono<Photo> savePhoto(FilePart file) {
@@ -176,17 +176,18 @@ public class PhotoService {
              .then();
   }
 
-  private Publisher<? extends Photo> getPhotosSetBase64(Map<String, String> params, Pageable pageable, String name) {
+  private Publisher<? extends Photo> getPhotos(Map<String, String> params, Pageable pageable, String name) {
+
     if (params.containsKey("albumId")) {
       return photoRepository
                .getPhotosByAlbumId(Integer.valueOf(params.get("albumId")), pageable)
                .flatMap(photo -> setBase64Photo(params, photo))
-               .doOnNext(photos -> logger.info("getPhotosSetBase64 by albumId: {}", photos.getTitle()));
+               .doOnNext(photos -> logger.info("getPhotos by albumId: {}", photos.getTitle()));
     } else {
       return photoRepository
                .getPhotosByGoogleId(name, pageable)
                .flatMap(photo -> setBase64Photo(params, photo))
-               .doOnNext(photos -> logger.info("getPhotosSetBase64 by googleId: {}", photos.getTitle()));
+               .doOnNext(photos -> logger.info("getPhotos by googleId: {}", photos.getTitle()));
     }
   }
 
@@ -202,8 +203,7 @@ public class PhotoService {
 
   private Function<String, Mono<? extends Photo>> compressAndSaveImage(FilePart file) {
     return name -> {
-      final var contentType = file.filename().toLowerCase()
-                                .endsWith((".png")) ? "png" : "jpg";
+      final var contentType = getContentType(file);
       final var fileName = file.filename();
       final var thumbnailPath = fileName.substring(0, fileName.lastIndexOf(".")) + ".thumbnail." + contentType;
       final var originalImagePath = fileName.substring(0, fileName.lastIndexOf(".")) + ".original." + contentType;
@@ -316,5 +316,18 @@ public class PhotoService {
              .map(Authentication::getName)
              .doOnError(error -> logger.error("error authorizing user name {}", error))
              .doOnNext(name -> logger.info("getting photo for googleId {}", name));
+  }
+
+  private String getContentType(FilePart filePart) {
+    if (filePart.filename().toLowerCase().endsWith("png")) {
+      return "png";
+    } else if (filePart.filename().toLowerCase().endsWith("jpg")) {
+      return "jpg";
+    } else if (filePart.filename().toLowerCase().endsWith("mp4")) {
+      return "mp4";
+    } else if (filePart.filename().toLowerCase().endsWith("mov")) {
+      return "mov";
+    }
+    return "jpg";
   }
 }

@@ -29,7 +29,7 @@
 //  @RequestMapping(value = "")
 //  public ResponseEntity<Page<List<Photo>>> getPhotos(@RequestParam Map<String, String> params, Pageable pageable) {
 //    logger.info("getting all photos with queryParams: {} pageable: {}", params, pageable);
-//    return new ResponseEntity(photoService.getPhotosByQueryParams(params, pageable), HttpStatus.OK);
+//    return new ResponseEntity(photoService.getPhotos(params, pageable), HttpStatus.OK);
 //  }
 //
 //  @RequestMapping(value = "/{id}")
