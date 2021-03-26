@@ -1,13 +1,12 @@
 package com.kooriim.pas.controller;
 
 import com.kooriim.pas.domain.Album;
-import com.kooriim.pas.domain.Photo;
+import com.kooriim.pas.domain.MediaItem;
 import com.kooriim.pas.repository.AlbumRepository;
 import com.kooriim.pas.repository.PhotoRepository;
 import com.kooriim.pas.repository.UserRepository;
 import com.kooriim.pas.service.AlbumService;
-import com.kooriim.pas.service.PhotoService;
-import org.junit.Ignore;
+import com.kooriim.pas.service.MediaItemService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +36,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -56,7 +54,7 @@ public class AlbumControllerIT {
   private WebTestClient webTestClient;
 
   @Autowired
-  private PhotoService photoService;
+  private MediaItemService mediaItemService;
 
   @Autowired
   private PhotoRepository photoRepository;
@@ -73,10 +71,10 @@ public class AlbumControllerIT {
   @BeforeEach
   public void before() {
     entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=0;").executeUpdate();
-    entityManager.createNativeQuery("truncate table photo_album;").executeUpdate();
-    entityManager.createNativeQuery("truncate table photo;").executeUpdate();
+    entityManager.createNativeQuery("truncate table media_item_album;").executeUpdate();
+    entityManager.createNativeQuery("truncate table media_item;").executeUpdate();
     entityManager.createNativeQuery("truncate table album;").executeUpdate();
-    entityManager.createNativeQuery("ALTER TABLE photo ALTER id RESTART with 1;").executeUpdate();
+    entityManager.createNativeQuery("ALTER TABLE media_item ALTER id RESTART with 1;").executeUpdate();
     entityManager.createNativeQuery("ALTER TABLE album ALTER id RESTART with 1;").executeUpdate();
     entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=1").executeUpdate();
     webTestClient = webTestClient.mutate().responseTimeout(Duration.ofMinutes(5)).build();
@@ -117,7 +115,7 @@ public class AlbumControllerIT {
                          .expectBodyList(Album.class)
                          .returnResult();
     assertEquals(1, result.getResponseBody().size());
-    assertEquals(1, result.getResponseBody().get(0).getPreviewPhotos().size());
+    assertEquals(1, result.getResponseBody().get(0).getPreviewMediaItems().size());
   }
 //
 //  @Test
@@ -130,7 +128,7 @@ public class AlbumControllerIT {
 //                         .exchange(UriHelper.uriWithQueryParam("/photos", "albumId", album.getBody().getId()),
 //                           HttpMethod.GET,
 //                           UriHelper.httpEntity(),
-//                           new ParameterizedTypeReference<List<Photo>>() {
+//                           new ParameterizedTypeReference<List<MediaItem>>() {
 //                           });
 //
 //    assertEquals(0, photos.getBody().size());
@@ -158,7 +156,7 @@ public class AlbumControllerIT {
     return album;
   }
 
-  private EntityExchangeResult<Photo> createPhoto() {
+  private EntityExchangeResult<MediaItem> createPhoto() {
     final var builder = new MultipartBodyBuilder();
     builder.part("file", new ClassPathResource("test.jpg"))
       .filename("test.jpg")
@@ -170,7 +168,7 @@ public class AlbumControllerIT {
              .exchange()
              .expectStatus()
              .is2xxSuccessful()
-             .expectBody(Photo.class).returnResult();
+             .expectBody(MediaItem.class).returnResult();
   }
 
 

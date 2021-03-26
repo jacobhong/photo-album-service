@@ -1,8 +1,8 @@
 package com.kooriim.pas.controller;
 
-import com.kooriim.pas.domain.Photo;
+import com.kooriim.pas.domain.MediaItem;
 import com.kooriim.pas.repository.PhotoRepository;
-import com.kooriim.pas.service.PhotoService;
+import com.kooriim.pas.service.MediaItemService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +44,7 @@ public class PhotoControllerIT {
   private EntityManager entityManager;
 
   @Autowired
-  private PhotoService photoService;
+  private MediaItemService mediaItemService;
 
   @Autowired
   private PhotoRepository photoRepository;
@@ -61,7 +61,7 @@ public class PhotoControllerIT {
   public void afterAll() {
     logger.info("clearing test env");
     entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=0;").executeUpdate();
-    entityManager.createNativeQuery("truncate table photo;").executeUpdate();
+    entityManager.createNativeQuery("truncate table media_item").executeUpdate();
     entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=1").executeUpdate();
   }
 
@@ -74,13 +74,20 @@ public class PhotoControllerIT {
 
   @Test
   @WithMockUser("anonymousUser")
+  public void testCreateVideo() throws IOException, InterruptedException {
+    final var video = createVideo().getResponseBody();
+    assertNotNull(video.getId());
+  }
+
+  @Test
+  @WithMockUser("anonymousUser")
   public void testGetPhotos() throws IOException {
     createPhoto().getResponseBody();
     webTestClient.get().uri("/photo-album-service/photos?page=0&size=10")
       .exchange()
       .expectStatus()
       .is2xxSuccessful()
-      .expectBodyList(Photo.class).consumeWith(p -> assertEquals(1, p.getResponseBody().size()));
+      .expectBodyList(MediaItem.class).consumeWith(p -> assertEquals(1, p.getResponseBody().size()));
   }
 
   @Test
@@ -91,7 +98,7 @@ public class PhotoControllerIT {
       .exchange()
       .expectStatus()
       .is2xxSuccessful()
-      .expectBody(Photo.class)
+      .expectBody(MediaItem.class)
       .consumeWith(p -> assertNotNull(p.getResponseBody().getBase64CompressedImage()));
   }
 
@@ -112,7 +119,7 @@ public class PhotoControllerIT {
       .exchange()
       .expectStatus()
       .is2xxSuccessful()
-      .expectBodyList(Photo.class)
+      .expectBodyList(MediaItem.class)
       .consumeWith(p -> assertNotNull(p.getResponseBody().get(0).getBase64ThumbnailImage()));
   }
 
@@ -124,7 +131,7 @@ public class PhotoControllerIT {
       .exchange()
       .expectStatus()
       .is2xxSuccessful()
-      .expectBodyList(Photo.class)
+      .expectBodyList(MediaItem.class)
       .consumeWith(p -> assertNotNull(p.getResponseBody().get(0).getBase64CompressedImage()));
   }
 
@@ -160,7 +167,7 @@ public class PhotoControllerIT {
 //    assertEquals(0, photoRepository.findAll().size());
 //  }
 
-//  /**
+  //  /**
 //   * Set isPublic to true
 //   */
   @Test
@@ -177,10 +184,10 @@ public class PhotoControllerIT {
       .exchange()
       .expectStatus()
       .is2xxSuccessful()
-      .expectBody(Photo.class).consumeWith(p -> assertEquals("updated", p.getResponseBody().getDescription()));
+      .expectBody(MediaItem.class).consumeWith(p -> assertEquals("updated", p.getResponseBody().getDescription()));
   }
 
-  private EntityExchangeResult<Photo> createPhoto() {
+  private EntityExchangeResult<MediaItem> createPhoto() {
     final var builder = new MultipartBodyBuilder();
     builder.part("file", new ClassPathResource("test.jpg"))
       .filename("test.jpg")
@@ -192,8 +199,22 @@ public class PhotoControllerIT {
              .exchange()
              .expectStatus()
              .is2xxSuccessful()
-             .expectBody(Photo.class).returnResult();
+             .expectBody(MediaItem.class).returnResult();
   }
 
+  private EntityExchangeResult<MediaItem> createVideo() {
+    final var builder = new MultipartBodyBuilder();
+    builder.part("file", new ClassPathResource("test.mov"))
+      .filename("test.mov")
+      .contentType(MediaType.APPLICATION_OCTET_STREAM);
+    return webTestClient.post()
+             .uri("/photo-album-service/photos")
+             .contentType(MediaType.MULTIPART_FORM_DATA)
+             .body(BodyInserters.fromMultipartData(builder.build()))
+             .exchange()
+             .expectStatus()
+             .is2xxSuccessful()
+             .expectBody(MediaItem.class).returnResult();
 
+  }
 }

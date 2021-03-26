@@ -11,7 +11,7 @@ spring:
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.SecurityAutoConfiguration, org.keycloak.adapters.springboot.KeycloakSpringBootConfiguration
   datasource:
-    url: jdbc:h2:mem:pas;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;DATABASE_TO_LOWER=TRUE;INIT=CREATE SCHEMA IF NOT EXISTS pas;MODE=MySQL
+    url: jdbc:h2:mem:pas;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;DATABASE_TO_LOWER=TRUE;INIT=CREATE SCHEMA IF NOT EXISTS pas;
     username: user131
     password: password131
     driver-class-name: org.h2.Driver

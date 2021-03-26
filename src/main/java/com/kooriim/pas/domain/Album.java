@@ -14,7 +14,7 @@ public class Album implements Serializable {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Integer id;
   @Transient
-  private List<Photo> previewPhotos = new ArrayList<>(2);
+  private List<MediaItem> previewMediaItems = new ArrayList<>(2);
   @Transient
   private List<Integer> photoIds = new ArrayList<>();
   private String title;
@@ -64,12 +64,12 @@ public class Album implements Serializable {
     this.updated = updated;
   }
 
-  public List<Photo> getPreviewPhotos() {
-    return previewPhotos;
+  public List<MediaItem> getPreviewMediaItems() {
+    return previewMediaItems;
   }
 
-  public void setPreviewPhotos(List<Photo> previewPhotos) {
-    this.previewPhotos = previewPhotos;
+  public void setPreviewMediaItems(List<MediaItem> previewMediaItems) {
+    this.previewMediaItems = previewMediaItems;
   }
 
   public List<Integer> getPhotoIds() {
@@ -110,7 +110,7 @@ public class Album implements Serializable {
   public String toString() {
     return "Album{" +
              "id=" + id +
-             ", previewPhotos=" + previewPhotos +
+             ", previewMediaItems=" + previewMediaItems +
              ", title='" + title + '\'' +
              ", description='" + description + '\'' +
              ", googleId='" + googleId + '\'' +

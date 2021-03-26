@@ -1,6 +1,6 @@
 package com.kooriim.pas.service;
 
-import com.kooriim.pas.domain.Photo;
+import com.kooriim.pas.domain.MediaItem;
 import com.kooriim.pas.repository.AlbumRepository;
 import com.kooriim.pas.repository.PhotoRepository;
 import com.kooriim.pas.domain.Album;
@@ -12,9 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -31,7 +29,7 @@ public class AlbumService {
   private PhotoRepository photoRepository;
 
   @Autowired
-  private PhotoService photoService;
+  private MediaItemService mediaItemService;
 
   public Flux<Album> getAlbums(Pageable pageable) {
     return ReactiveSecurityContextHolder
@@ -41,16 +39,16 @@ public class AlbumService {
              .doOnNext(name -> logger.info("getting photos for googleId {}", name))
              .flatMapMany(name -> albumRepository.findByGoogleId(name, pageable)
                                     .flatMap(album -> {
-                                      final var preview = new ArrayList<Photo>();
+                                      final var preview = new ArrayList<MediaItem>();
                                       return getPhotosByAlbumId(album.getId())
-                                               .flatMap(photo -> photoService.setBase64Thumbnail(photo)
+                                               .flatMap(photo -> mediaItemService.setBase64Thumbnail(photo)
                                                                    .flatMap(a -> {
                                                                      preview.add(a);
                                                                      return Mono.just(a);
                                                                    }))
                                                .collectList()
                                                .map(p -> {
-                                                 album.setPreviewPhotos(p);
+                                                 album.setPreviewMediaItems(p);
                                                  return album;
                                                });
                                     }));
@@ -59,13 +57,13 @@ public class AlbumService {
 //  public Mono<Album> getAlbumById(Integer albumId, Map<String, String> queryParams) {
 //    return albumRepository.getAlbumById(albumId).map(album -> {
 //      if (queryParams.containsKey("withPhotos") && queryParams.get("withPhotos").equalsIgnoreCase("true")) {
-//        final var preview = new ArrayList<Photo>();
-//        album.setPreviewPhotos(preview);
+//        final var preview = new ArrayList<MediaItem>();
+//        album.setPreviewMediaItems(preview);
 //        getPhotosByAlbumId(albumId)
 //          .collectList()
 //          .map(photos -> {
 //            photos.forEach(photo -> {
-//              photoService.setBase64Thumbnail(photo)
+//              mediaItemService.setBase64Thumbnail(photo)
 //                .map(p -> {
 //                  preview.add(p);
 //                  return p;
@@ -80,7 +78,7 @@ public class AlbumService {
 //    });
 //  }
 
-  private Flux<Photo> getPhotosByAlbumId(Integer albumId) {
+  private Flux<MediaItem> getPhotosByAlbumId(Integer albumId) {
     return photoRepository.getPhotosByAlbumId(albumId, PageRequest.of(0, 4));
   }
 

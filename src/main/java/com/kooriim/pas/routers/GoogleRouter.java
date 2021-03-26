@@ -23,7 +23,7 @@ public class GoogleRouter {
   @Bean
   public RouterFunction<ServerResponse> route4(GoogleHandler googleHandler) {
     return nest(path("/photo-album-service"),
-      RouterFunctions.route(GET("/sync").and(ACCEPTS_JSON), googleHandler::syncGooglePhotos));
+      RouterFunctions.route(POST("/google-sync").and(ACCEPTS_JSON), googleHandler::syncGooglePhotos));
 
   }
 }

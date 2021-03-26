@@ -43,15 +43,15 @@ public class AlbumRepository {
       var em = entityManagerFactory.createEntityManager();
       var trans = em.getTransaction();
       trans.begin();
-      final var result = em.createNativeQuery("INSERT INTO photo_album(album_id, photo_id) VALUES(:albumId, :photoId)")
+      final var result = em.createNativeQuery("INSERT INTO media_item_album(album_id, media_item_id) VALUES(:albumId, :photoId)")
                            .setParameter("albumId", albumId)
                            .setParameter("photoId", photoId)
                            .executeUpdate();
       trans.commit();
       em.close();
       return result;
-    }).doOnNext(result -> logger.info("Saved to photo_album photoId {} albumId {}", photoId, albumId))
-             .doOnError(error -> logger.error("Failed to photo_album photoId {} albumId {} error {}",
+    }).doOnNext(result -> logger.info("Saved to media_item_album photoId {} albumId {}", photoId, albumId))
+             .doOnError(error -> logger.error("Failed to media_item_album photoId {} albumId {} error {}",
                photoId,
                albumId,
                error.getMessage()))

@@ -1,6 +1,6 @@
 package com.kooriim.pas.controller;
 
-import com.kooriim.pas.service.PhotoService;
+import com.kooriim.pas.service.MediaItemService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 //@RestController
@@ -21,7 +20,7 @@ import reactor.core.scheduler.Schedulers;
 public class PublicGalleryController {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
   @Autowired
-  private PhotoService photoService;
+  private MediaItemService mediaItemService;
 
   @RequestMapping(value = "")
   public Mono<ServerResponse> getPhotos(ServerRequest serverRequest) {

@@ -31,12 +31,12 @@ services:
     image: mariadb:10.4
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: pw131
+      MYSQL_ROOT_PASSWORD: pw131 # make env vairable
       MYSQL_DATABASE: pas
       MYSQL_USER: user131
       MYSQL_PASSWORD: pw131
     ports:
-      - "3303:3306"
+      - "3306:3306"
     volumes:
       - ./docker/mysql/mysql:/var/lib/mysql
       - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf

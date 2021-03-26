@@ -14,20 +14,24 @@ CREATE TABLE  users (
     updated TIMESTAMP DEFAULT 0 on update CURRENT_TIMESTAMP
 )  ENGINE=INNODB DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS photo;
-CREATE TABLE  photo (
+DROP TABLE IF EXISTS media_item;
+CREATE TABLE  media_item (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(50) NOT NULL,
-    original_image_file_path VARCHAR(255) NOT NULL,
-    compressed_image_file_path VARCHAR(255) NOT NULL,
-    thumbnail_file_path VARCHAR(255) NOT NULL,
+    original_image_file_path VARCHAR(255),
+    compressed_image_file_path VARCHAR(255),
+    thumbnail_file_path VARCHAR(255),
+    video_file_path VARCHAR(255),
     content_type VARCHAR(10) NOT NULL,
+    media_type VARCHAR(10) NOT NULL,
     description VARCHAR(50) DEFAULT NULL,
     google_id VARCHAR(255) NOT NULL,
     is_public TINYINT(1) DEFAULT 0,
+    original_date TIMESTAMP DEFAULT 0,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated TIMESTAMP DEFAULT 0 on update CURRENT_TIMESTAMP,
-    FOREIGN KEY (google_id) REFERENCES users(google_id)
+    FOREIGN KEY (google_id) REFERENCES users(google_id),
+    CONSTRAINT title_google_id UNIQUE(title, google_id)
 )  ENGINE=INNODB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS album;
@@ -41,13 +45,13 @@ CREATE TABLE  album (
     FOREIGN KEY (google_id) REFERENCES users(google_id)
 )  ENGINE=INNODB DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS photo_album;
-CREATE TABLE  photo_album (
-    photo_id INT(11) NOT NULL,
+DROP TABLE IF EXISTS media_item_album;
+CREATE TABLE  media_item_album (
+    media_item_id INT(11) NOT NULL,
     album_id INT(11) NOT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (photo_id, album_id),
-    FOREIGN KEY (photo_id) REFERENCES photo(id),
+    PRIMARY KEY (media_item_id, album_id),
+    FOREIGN KEY (media_item_id) REFERENCES media_item(id),
     FOREIGN KEY (album_id) REFERENCES album(id)
 )  ENGINE=INNODB DEFAULT CHARSET=utf8;
 

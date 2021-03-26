@@ -7,8 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.server.*;
 
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.http.MediaType.APPLICATION_STREAM_JSON;
+import static org.springframework.http.MediaType.*;
 import static org.springframework.web.reactive.function.server.RequestPredicates.*;
 import static org.springframework.web.reactive.function.server.RouterFunctions.nest;
 
@@ -22,6 +21,7 @@ public class PhotoRouter {
   public RouterFunction<ServerResponse> route(PhotoHandler photoHandler) {
     return nest(path("/photo-album-service"),
       RouterFunctions.route(GET("/photos/{id}").and(ACCEPTS_JSON), photoHandler::getPhotoById)
+        .andRoute(GET("/videos/{title}").and(contentType(APPLICATION_OCTET_STREAM)).and(accept(APPLICATION_OCTET_STREAM)), photoHandler::getVideoByTitle)
         .andRoute(GET("/photos").and(ACCEPTS_JSON), photoHandler::getPhotos)
         .andRoute(PATCH("/photos").and(CONTENT_TYPE_JSON), photoHandler::patchPhotos)
         .andRoute(DELETE("/photos/{id}").and(ACCEPTS_JSON), photoHandler::deletePhoto)

@@ -17,9 +17,9 @@ in ```application.yml``` change directory for images to be saved, if want to use
 build and push docker image to ec2
 
 ```
-docker build -t photo-album-service .
-docker tag photo-album-service:latest 500536527570.dkr.ecr.us-west-1.amazonaws.com/photo-album-service:latest
-docker push 500536527570.dkr.ecr.us-west-1.amazonaws.com/photo-album-service:latest
+docker build -t mediaItem-album-service .
+docker tag mediaItem-album-service:latest 500536527570.dkr.ecr.us-west-1.amazonaws.com/mediaItem-album-service:latest
+docker push 500536527570.dkr.ecr.us-west-1.amazonaws.com/mediaItem-album-service:latest
 ec2-54-183-228-18.us-west-1.compute.amazonaws.com
 ```
 create real cert with certbot

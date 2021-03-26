@@ -1,6 +1,6 @@
 package com.kooriim.pas.repository;
 
-import com.kooriim.pas.domain.Photo;
+import com.kooriim.pas.domain.MediaItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,20 +25,20 @@ public class PhotoRepository {
   @Autowired
   private EntityManagerFactory entityManagerFactory;
 
-  public Mono<Photo> getPhotoById(Integer id) {
-    return Mono.fromCallable(() -> entityManager.createNativeQuery("SELECT * FROM photo where id = :id", Photo.class)
+  public Mono<MediaItem> getPhotoById(Integer id) {
+    return Mono.fromCallable(() -> entityManager.createNativeQuery("SELECT * FROM media_item where id = :id", MediaItem.class)
                                      .setParameter("id", id)
                                      .getSingleResult())
-             .cast(Photo.class)
+             .cast(MediaItem.class)
              .doOnNext(photo -> logger.info("Got photo {}", photo.getTitle()))
              .doOnError(error -> logger.error("Error getting photo {}", error.getMessage()))
              .onErrorResume(e -> Mono.empty())
              .subscribeOn(Schedulers.boundedElastic());
   }
 
-  public Flux<Photo> getPhotosByAlbumId(Integer albumId, Pageable pageable) {
+  public Flux<MediaItem> getPhotosByAlbumId(Integer albumId, Pageable pageable) {
     return Flux.defer(() -> Flux.fromIterable(entityManager
-                                                .createNativeQuery("SELECT * FROM photo p INNER JOIN photo_album pa ON p.id=pa.photo_id WHERE pa.album_id=:id", Photo.class)
+                                                .createNativeQuery("SELECT * FROM media_item mi INNER JOIN media_item_album mia ON mi.id=mia.media_item_id WHERE mia.album_id=:id", MediaItem.class)
                                                 .setParameter("id", albumId)
                                                 .setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
                                                 .setMaxResults(pageable.getPageSize()).getResultList()))
@@ -47,9 +47,9 @@ public class PhotoRepository {
              .subscribeOn(Schedulers.boundedElastic());
   }
 
-  public Flux<Photo> getPhotosByGoogleId(String googleId, Pageable pageable) {
+  public Flux<MediaItem> getPhotosByGoogleId(String googleId, Pageable pageable) {
     return Flux.defer(() -> Flux.fromIterable(entityManager
-                                                .createNativeQuery("SELECT * FROM photo WHERE google_id=:google_id order by created desc", Photo.class)
+                                                .createNativeQuery("SELECT * FROM media_item WHERE google_id=:google_id order by created desc", MediaItem.class)
                                                 .setParameter("google_id", googleId)
                                                 .setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
                                                 .setMaxResults(pageable.getPageSize()).getResultList()))
@@ -58,9 +58,33 @@ public class PhotoRepository {
              .subscribeOn(Schedulers.boundedElastic());
   }
 
-  public Flux<Photo> getPhotosByIds(List<Integer> ids) {
+  public Mono<MediaItem> getPhotoTitle(String googleId, String filename) {
+    return Mono.fromCallable(() -> entityManager.createNativeQuery("SELECT * FROM media_item where title = :title and google_id = :googleId", MediaItem.class)
+                                     .setParameter("title", filename)
+                                     .setParameter("googleId", googleId)
+                                     .getSingleResult())
+             .cast(MediaItem.class)
+             .doOnNext(photo -> logger.info("Got photo by title {}", photo.getTitle()))
+             .doOnError(error -> logger.error("Error getting photo by title {}", error.getMessage()))
+             .onErrorResume(e -> Mono.empty())
+             .subscribeOn(Schedulers.boundedElastic());
+  }
+
+  public Mono<MediaItem> mediaItemExists(String googleId, String filename) {
+    return Mono.fromCallable(() -> entityManager.createNativeQuery("SELECT * FROM media_item where title = :title and google_id = :googleId", MediaItem.class)
+                                     .setParameter("googleId", googleId)
+                                     .setParameter("title", filename)
+                                     .getSingleResult())
+             .cast(MediaItem.class)
+             .doOnNext(photo -> logger.info("Check if mediaItem exists {} {}", filename, photo))
+//             .doOnError(error -> logger.error("Error Check if mediaItem exists {} {}", filename, error.getMessage()))
+             .onErrorResume(e -> Mono.just(new MediaItem()))
+             .subscribeOn(Schedulers.boundedElastic());
+  }
+
+  public Flux<MediaItem> getPhotosByIds(List<Integer> ids) {
     return Flux.defer(() -> Flux.fromIterable(entityManager
-                                                .createNativeQuery("SELECT * FROM photo WHERE id in (:ids)", Photo.class)
+                                                .createNativeQuery("SELECT * FROM media_item WHERE id in (:ids)", MediaItem.class)
                                                 .setParameter("ids", ids)
                                                 .getResultList()))
              .doOnNext(result -> logger.info("Got photoById {}", ids.toString()))
@@ -68,9 +92,9 @@ public class PhotoRepository {
              .subscribeOn(Schedulers.boundedElastic());
   }
 
-  public Flux<Photo> getPhotos() {
+  public Flux<MediaItem> getPhotos() {
     return Flux.defer(() -> Flux.fromIterable(entityManager
-                                                .createNativeQuery("SELECT * FROM photo", Photo.class)
+                                                .createNativeQuery("SELECT * FROM media_item", MediaItem.class)
                                                 .getResultList()))
              .subscribeOn(Schedulers.boundedElastic());
   }
@@ -80,7 +104,7 @@ public class PhotoRepository {
       var em = entityManagerFactory.createEntityManager();
       var trans = em.getTransaction();
       trans.begin();
-      final var result = em.createNativeQuery("DELETE photo_album, photo FROM photo_album RIGHT JOIN photo ON photo_album.photo_id=photo.id WHERE photo.id in (:ids)")
+      final var result = em.createNativeQuery("DELETE media_item_album, media_item FROM media_item_album RIGHT JOIN media_item ON media_item_album.media_item_id=media_item.id WHERE media_item.id in (:ids)")
                            .setParameter("ids", ids)
                            .executeUpdate();
       trans.commit();
@@ -97,7 +121,7 @@ public class PhotoRepository {
       var em = entityManagerFactory.createEntityManager();
       var trans = em.getTransaction();
       trans.begin();
-      final var result = em.createNativeQuery("DELETE FROM photo_album where album_id = :id")
+      final var result = em.createNativeQuery("DELETE FROM media_item_album where album_id = :id")
                            .setParameter("id", albumId)
                            .executeUpdate();
       trans.commit();
@@ -109,18 +133,20 @@ public class PhotoRepository {
   }
 
 
-  public Mono<Photo> save(Photo photo) {
+  public Mono<MediaItem> save(MediaItem mediaItem) {
     return Mono.fromCallable(() -> {
       var em = entityManagerFactory.createEntityManager();
       var trans = em.getTransaction();
       trans.begin();
-      final var result = em.merge(photo);
+      final var result = em.merge(mediaItem);
       trans.commit();
       em.close();
       return result;
-    }).doOnNext(result -> logger.info("Saved photo {}", result.getTitle()))
-             .doOnError(error -> logger.error("Error saving photo {}", error.getMessage()))
+    }).doOnNext(result -> logger.info("Saved mediaItem {}", result.getTitle()))
+             .doOnError(error -> logger.error("Error saving mediaItem {}", error.getMessage()))
              .subscribeOn(Schedulers.boundedElastic());
   }
+
+
 }
 

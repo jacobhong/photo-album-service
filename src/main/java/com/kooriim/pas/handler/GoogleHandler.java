@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -27,10 +28,12 @@ public class GoogleHandler {
 //    }
 //    final var queryParams = serverRequest.queryParams();
 //    final var pageable = PageRequest.of(Integer.valueOf(page), Integer.valueOf(size));
-//    return photoService.getPhotos(queryParams.toSingleValueMap(), pageable)
+//    return photoService.getMediaItems(queryParams.toSingleValueMap(), pageable)
 //             .collectList()
 //             .flatMap(photos -> ServerResponse.ok().bodyValue(photos));
     return googleService.syncGooglePhotos()
-             .flatMap(a -> Mono.empty());
+             .collectList()
+             .flatMap(x -> ServerResponse.ok().bodyValue(x));
   }
+
 }

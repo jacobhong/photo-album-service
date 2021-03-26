@@ -27,7 +27,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/pas?zeroDateTimeBehavior=convertToNull
     username: user131
-    password: password131
+    password: pw131 # env variable this
     driver-class-name: com.mysql.jdbc.Driver
   jpa:
     properties:
@@ -53,3 +53,7 @@ require-ssl: false
 allowed-origin: "*"
 s3:
   bucketName: kooriim-images-test
+logging:
+  level:
+    org:
+      springframework: DEBUG

@@ -1,7 +1,7 @@
 //package com.kooriim.pas.controller;
 //
-//import com.kooriim.pas.domain.Photo;
-//import com.kooriim.pas.service.PhotoService;
+//import com.kooriim.pas.domain.MediaItem;
+//import com.kooriim.pas.service.MediaItemService;
 //import org.slf4j.Logger;
 //import org.slf4j.LoggerFactory;
 //import org.springframework.beans.factory.annotation.Autowired;
@@ -24,16 +24,16 @@
 //  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 //
 //  @Autowired
-//  private PhotoService photoService;
+//  private MediaItemService photoService;
 //
 //  @RequestMapping(value = "")
-//  public ResponseEntity<Page<List<Photo>>> getPhotos(@RequestParam Map<String, String> params, Pageable pageable) {
+//  public ResponseEntity<Page<List<MediaItem>>> getMediaItems(@RequestParam Map<String, String> params, Pageable pageable) {
 //    logger.info("getting all photos with queryParams: {} pageable: {}", params, pageable);
-//    return new ResponseEntity(photoService.getPhotos(params, pageable), HttpStatus.OK);
+//    return new ResponseEntity(photoService.getMediaItems(params, pageable), HttpStatus.OK);
 //  }
 //
 //  @RequestMapping(value = "/{id}")
-//  public ResponseEntity<Photo> getPhotoById(@PathVariable("id") Integer photoId,
+//  public ResponseEntity<MediaItem> getPhotoById(@PathVariable("id") Integer photoId,
 //                                            @RequestParam(defaultValue = "false", value = "compressedImage") Boolean setcompressedImage) {
 //    logger.info("getting photo by id: {}", photoId);
 //    final var photo = photoService.getPhotoById(photoId, setcompressedImage);
@@ -50,7 +50,7 @@
 //  @RequestMapping(value = "/{id}", method = RequestMethod.DELETE)
 //  public ResponseEntity<Void> deletePhoto(@PathVariable Integer id) {
 //    logger.info("deleting photo id: {}", id);
-//    photoService.deletePhotos(new ArrayList<>() {{
+//    photoService.deleteMediaItems(new ArrayList<>() {{
 //      add(id);
 //    }});
 //    return new ResponseEntity(HttpStatus.OK);
@@ -59,20 +59,20 @@
 //  @RequestMapping(value = "", method = RequestMethod.DELETE)
 //  public ResponseEntity<Void> deletePhoto(@RequestParam("photoIds") List<Integer> ids) {
 //    logger.info("deleting photo id: {}", ids);
-//    photoService.deletePhotos(ids);
+//    photoService.deleteMediaItems(ids);
 //    return new ResponseEntity(HttpStatus.OK);
 //  }
 //
 //  @RequestMapping(value = "", method = RequestMethod.PATCH)
-//  public ResponseEntity<Void> patchPhotos(@RequestBody List<Photo> photos) {
+//  public ResponseEntity<Void> patchPhotos(@RequestBody List<MediaItem> photos) {
 //    logger.info("patching photos: {}", photos);
 //    photoService.patchPhotos(photos);
 //    return new ResponseEntity(HttpStatus.OK);
 //  }
 //
 //  @RequestMapping(value = "", method = RequestMethod.POST, consumes = "multipart/form-data")
-//  public ResponseEntity<Photo> create(@RequestParam("file") MultipartFile file) throws IOException {
+//  public ResponseEntity<MediaItem> create(@RequestParam("file") MultipartFile file) throws IOException {
 //    logger.info("Creating photo {}", file.getName());
-//    return new ResponseEntity(photoService.savePhoto(file), HttpStatus.OK);
+//    return new ResponseEntity(photoService.createMediaItem(file), HttpStatus.OK);
 //  }
 //}
