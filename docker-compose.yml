@@ -31,12 +31,12 @@ services:
     image: mariadb:10.4
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: pw131 # make env vairable
-      MYSQL_DATABASE: pas
-      MYSQL_USER: user131
-      MYSQL_PASSWORD: pw131
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}" # make env vairable
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${MYSQL_USER}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
     ports:
-      - "3306:3306"
+      - "3303:3306"
     volumes:
       - ./docker/mysql/mysql:/var/lib/mysql
       - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
@@ -46,15 +46,15 @@ services:
   keycloak:
     image: jboss/keycloak
     environment:
-      KEYCLOAK_USER: keycloak131
-      KEYCLOAK_PASSWORD: password131
+      KEYCLOAK_USER: "${KEYCLOAK_USER}"
+      KEYCLOAK_PASSWORD: "${KEYCLOAK_PASSWORD}"
       DB_PORT: 3306
-      DB_DATABASE: keycloak
-      DB_PASSWORD: password131
-      DB_USER: keycloak131
+      DB_DATABASE: "${KEYCLOAK_DB_DATABASE}"
+      DB_PASSWORD: "${KEYCLOAK_DB_PASSWORD}"
+      DB_USER: "${KEYCLOAK_DB_USER}"
       DB_VENDOR: mariadb
       DB_SCHEMA: keycloak
-      KEYCLOAK_LOGLEVEL: DEBUG
+      #KEYCLOAK_LOGLEVEL: DEBUG
     volumes:
       - ./docker/keystore/keycloak:/etc/x509/https
     ports:
