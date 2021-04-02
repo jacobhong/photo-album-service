@@ -1,7 +1,7 @@
 package com.kooriim.pas.controller;
 
 import com.kooriim.pas.domain.MediaItem;
-import com.kooriim.pas.repository.PhotoRepository;
+import com.kooriim.pas.repository.MediaItemRepository;
 import com.kooriim.pas.service.MediaItemService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +47,7 @@ public class PhotoControllerIT {
   private MediaItemService mediaItemService;
 
   @Autowired
-  private PhotoRepository photoRepository;
+  private MediaItemRepository mediaItemRepository;
 
   @Autowired
   private WebTestClient webTestClient;
@@ -154,7 +154,7 @@ public class PhotoControllerIT {
 //  @Test
 //  public void testDeletePhotos() {
 //    final var photo = createPhoto();
-//    assertEquals(1, photoRepository.findAll().size());
+//    assertEquals(1, mediaItemRepository.findAll().size());
 //    final var photoIdsAsString = Arrays.asList(photo.getId())
 //                                   .toString()
 //                                   .replaceAll("\\[", "")
@@ -164,7 +164,7 @@ public class PhotoControllerIT {
 //        HttpMethod.DELETE,
 //        UriHelper.httpEntity(),
 //        Void.class);
-//    assertEquals(0, photoRepository.findAll().size());
+//    assertEquals(0, mediaItemRepository.findAll().size());
 //  }
 
   //  /**

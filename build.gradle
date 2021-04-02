@@ -29,8 +29,10 @@ dependencies {
 
 	compile 'com.google.photos.library:google-photos-library-client:1.6.0'
 
-	implementation platform('software.amazon.awssdk:bom:2.13.46')
+	implementation platform('software.amazon.awssdk:bom:2.16.29')
 	implementation 'software.amazon.awssdk:s3'
+	implementation 'software.amazon.awssdk:netty-nio-client'
+//
 	compile group: 'net.coobird', name: 'thumbnailator', version: '0.4.8'
 	compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.19'
 	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.11'

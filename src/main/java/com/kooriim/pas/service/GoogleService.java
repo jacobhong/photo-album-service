@@ -7,7 +7,7 @@ import com.google.photos.library.v1.PhotosLibraryClient;
 import com.google.photos.library.v1.PhotosLibrarySettings;
 import com.google.photos.types.proto.MediaItem;
 import com.kooriim.pas.domain.IdentityToken;
-import com.kooriim.pas.repository.PhotoRepository;
+import com.kooriim.pas.repository.MediaItemRepository;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,9 +31,15 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.sql.Date;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 
+/**
+ * alpha testing
+ * TODO add sync by date
+ * possibly add kafka
+ */
 @Service
 public class GoogleService {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -43,16 +49,18 @@ public class GoogleService {
   @Autowired
   private WebClient webClient;
   @Autowired
-  private PhotoRepository photoRepository;
+  private MediaItemRepository mediaItemRepository;
 
   public Flux<com.kooriim.pas.domain.MediaItem> syncGooglePhotos() {
     return getUserAccessToken()
              .flatMap(accessToken -> getGoogleIdentityToken(accessToken))
              .flatMap(identityToken -> initializeS3PhotosLibraryClient(identityToken))
              .flatMapMany(photosLibraryClient -> getGooglePhotos(photosLibraryClient))
+             .delayElements(Duration.ofSeconds(2))
              .flatMap(mediaItem -> downloadGoogleMediaItem(mediaItem))
+             .delayElements(Duration.ofSeconds(2))
              .flatMap(mediaItem -> uploadMediaItem(mediaItem))
-//             .doOnNext(x -> logger.info("finishing sync google photos"))
+             .delayElements(Duration.ofSeconds(2))
              .subscribeOn(Schedulers.elastic());
   }
 
@@ -72,6 +80,7 @@ public class GoogleService {
   private Flux<MediaItem> getGooglePhotos(PhotosLibraryClient photosLibraryClient) {
     return Flux.defer(() -> {
       logger.info("getting google photos.. may take awhile");
+
       final var listMediaItemsPagedResponse = photosLibraryClient.listMediaItems();
       logger.info("response {}", listMediaItemsPagedResponse);
       final var list = new ArrayList<MediaItem>();
@@ -81,7 +90,7 @@ public class GoogleService {
       var nextPageToken = listMediaItemsPagedResponse.getNextPageToken();
       var nextPage = listMediaItemsPagedResponse.getPage().getNextPage();
       var index = 0; // TODO batch get here instead
-      while (StringUtils.isNotEmpty(nextPageToken) && index < 8) {
+      while (StringUtils.isNotEmpty(nextPageToken)) {
         logger.info("getting next page");
         nextPage.getValues()
           .forEach(mediaItem -> list.add(mediaItem));
@@ -120,12 +129,16 @@ public class GoogleService {
   private Mono<MediaItem> downloadGoogleMediaItem(MediaItem mediaItem) {
 //    logger.info("checking if media item already exists{}", mediaItem.getFilename());
     return mediaItemService.getUserGoogleId()
-             .flatMap(googleId -> photoRepository.mediaItemExists(googleId, mediaItem.getFilename())
+             .flatMap(googleId -> mediaItemRepository.mediaItemExists(googleId, mediaItem.getFilename())
                                     .flatMap(exists -> {
                                       if (exists.getId() == null) {
                                         var contentType = getContentType(mediaItem.getMimeType());
                                         var mediaType = mediaItemService.getMediaType(mediaItem.getMimeType());
 //                                        if (mediaType.equalsIgnoreCase("photo")) return Mono.empty();
+                                        final var googleTempDir = new File("/tmp/google_photos");
+                                        if (!googleTempDir.exists()) {
+                                          googleTempDir.mkdirs();
+                                        }
                                         if (mediaType.equalsIgnoreCase("photo")) {
                                           return downloadImage(mediaItem, contentType);
                                         } else {
@@ -151,6 +164,7 @@ public class GoogleService {
       ImageIO.write(image, contentType, outputfile);
       return mediaItem;
     }).doOnError(error -> logger.error("error downloading image from google {} {}", mediaItem.getFilename(), error.getMessage()))
+             .retryBackoff(20, Duration.ofMinutes(2))
              .doOnNext(x -> logger.info("downloaded image from google {}", mediaItem.getFilename()));
   }
 
@@ -164,6 +178,7 @@ public class GoogleService {
         .transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
       return mediaItem;
     }).doOnError(error -> logger.error("error downloading video from google {} {}", mediaItem.getFilename(), error.getMessage()))
+             .retryBackoff(20, Duration.ofMinutes(2))
              .doOnNext(x -> logger.info("downloaded video from google {}", mediaItem.getFilename()));
   }
 

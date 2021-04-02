@@ -1,6 +1,7 @@
 package com.kooriim.pas.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.hibernate.Metamodel;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.SelectBeforeUpdate;
 import org.springframework.http.codec.multipart.FilePart;
@@ -20,18 +21,15 @@ public class MediaItem implements Serializable {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Integer id;
-
-  @Size(max=50)
+  @Transient
+  private MediaItemMetaData mediaItemMetaData;
+  @Size(max = 50)
   private String title;
-  @Column(name = "compressed_image_file_path")
   private String compressedImageFilePath;
-  @Column(name = "original_image_file_path")
   private String originalImageFilePath;
-  @Column(name = "thumbnail_file_path")
   private String thumbnailFilePath;
-  @Column(name = "video_file_path")
   private String videoFilePath;
-  @Size(max=50)
+  @Size(max = 50)
   private String description;
   @Transient
   private String base64CompressedImage;
@@ -39,17 +37,13 @@ public class MediaItem implements Serializable {
   private String base64OriginalImage;
   @Transient
   private String base64ThumbnailImage;
-  @Column(name = "google_id")
   private String googleId;
   private String contentType;
   private String mediaType;
-  @Column(name ="is_public", nullable = false, columnDefinition = "BIT", length = 1)
+  @Column(name = "is_public", nullable = false, columnDefinition = "BIT", length = 1)
   private Boolean isPublic;
-  private Date originalDate;
   private Date created;
   private Date updated;
-
-//  private MediaItemMetaData mediaItemMetaData;
 
   public Integer getId() {
     return id;
@@ -57,6 +51,14 @@ public class MediaItem implements Serializable {
 
   public void setId(Integer id) {
     this.id = id;
+  }
+
+  public MediaItemMetaData getMediaItemMetaData() {
+    return mediaItemMetaData;
+  }
+
+  public void setMediaItemMetaData(MediaItemMetaData mediaItemMetaData) {
+    this.mediaItemMetaData = mediaItemMetaData;
   }
 
   public String getTitle() {
@@ -163,14 +165,6 @@ public class MediaItem implements Serializable {
     isPublic = aPublic;
   }
 
-  public Date getOriginalDate() {
-    return originalDate;
-  }
-
-  public void setOriginalDate(Date originalDate) {
-    this.originalDate = originalDate;
-  }
-
   public Date getCreated() {
     return created;
   }
@@ -187,15 +181,7 @@ public class MediaItem implements Serializable {
     this.updated = updated;
   }
 
-//  public MediaItemMetaData getMediaItemMetaData() {
-//    return mediaItemMetaData;
-//  }
-
-//  public void setMediaItemMetaData(MediaItemMetaData mediaItemMetaData) {
-//    this.mediaItemMetaData = mediaItemMetaData;
-//  }
-
-  public static MediaItem newInstancePhoto(String fileName, String compressedImageFilePath, String originalImageFilePath, String thumbnailFilePath, String contentType, String googleId, String mediaType, Date originalDate) {
+  public static MediaItem newInstancePhoto(String fileName, String compressedImageFilePath, String originalImageFilePath, String thumbnailFilePath, String contentType, String googleId, String mediaType, com.google.photos.types.proto.MediaItem mediaItem) {
     final var photo = new MediaItem();
     photo.setContentType(contentType);
     photo.setCompressedImageFilePath(compressedImageFilePath);
@@ -204,11 +190,14 @@ public class MediaItem implements Serializable {
     photo.setTitle(fileName);
     photo.setGoogleId(googleId);
     photo.setMediaType(mediaType);
-    photo.setOriginalDate(originalDate);
+    if (mediaItem.getMediaMetadata() != null) {
+      final var mediaItemMetaData = new MediaItemMetaData(mediaItem.getMediaMetadata());
+      photo.setMediaItemMetaData(mediaItemMetaData);
+    }
     return photo;
   }
 
-  public static MediaItem newInstanceVideo(String fileName, String thumbnailFilePath, String videoFilePath, String contentType, String googleId, String mediaType, Date originalDate) {
+  public static MediaItem newInstanceVideo(String fileName, String thumbnailFilePath, String videoFilePath, String contentType, String googleId, String mediaType, com.google.photos.types.proto.MediaItem mediaItem) {
     final var video = new MediaItem();
     video.setContentType(contentType);
     video.setThumbnailFilePath(thumbnailFilePath);
@@ -216,8 +205,10 @@ public class MediaItem implements Serializable {
     video.setTitle(fileName);
     video.setGoogleId(googleId);
     video.setMediaType(mediaType);
-    video.setOriginalDate(originalDate);
-    return video;  }
+    final var mediaItemMetaData = new MediaItemMetaData(mediaItem.getMediaMetadata());
+    video.setMediaItemMetaData(mediaItemMetaData);
+    return video;
+  }
 
 
 }

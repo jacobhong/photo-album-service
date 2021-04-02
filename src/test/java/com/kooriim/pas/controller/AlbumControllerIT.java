@@ -3,7 +3,7 @@ package com.kooriim.pas.controller;
 import com.kooriim.pas.domain.Album;
 import com.kooriim.pas.domain.MediaItem;
 import com.kooriim.pas.repository.AlbumRepository;
-import com.kooriim.pas.repository.PhotoRepository;
+import com.kooriim.pas.repository.MediaItemRepository;
 import com.kooriim.pas.repository.UserRepository;
 import com.kooriim.pas.service.AlbumService;
 import com.kooriim.pas.service.MediaItemService;
@@ -57,7 +57,7 @@ public class AlbumControllerIT {
   private MediaItemService mediaItemService;
 
   @Autowired
-  private PhotoRepository photoRepository;
+  private MediaItemRepository mediaItemRepository;
 
   @Autowired
   private AlbumRepository albumRepository;

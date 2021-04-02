@@ -8,8 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -45,7 +43,7 @@ public class PhotoHandler {
   public Mono<ServerResponse> getPhotoById(ServerRequest serverRequest) {
     logger.info("getting photo by id: {}", serverRequest.pathVariable("id"));
     return mediaItemService
-             .getPhotoById(Integer.valueOf(serverRequest.pathVariable("id")),
+             .getMediaItemById(Integer.valueOf(serverRequest.pathVariable("id")),
                serverRequest.queryParams().toSingleValueMap())
              .flatMap(p -> ServerResponse.ok().bodyValue(p))
              .switchIfEmpty(ServerResponse.notFound().build());

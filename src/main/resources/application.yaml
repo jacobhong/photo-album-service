@@ -32,6 +32,8 @@ spring:
   jpa:
     properties:
       hibernate:
+        naming:
+          implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
         dialect: org.hibernate.dialect.MariaDBDialect
         jdbc:
           batch_size: 50

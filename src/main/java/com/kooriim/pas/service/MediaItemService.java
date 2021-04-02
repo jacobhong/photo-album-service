@@ -1,8 +1,10 @@
 package com.kooriim.pas.service;
 
 import com.kooriim.pas.domain.MediaItem;
+import com.kooriim.pas.domain.MediaItemMetaData;
 import com.kooriim.pas.domain.error.ConflictException;
-import com.kooriim.pas.repository.PhotoRepository;
+import com.kooriim.pas.repository.MediaItemMetaDataRepository;
+import com.kooriim.pas.repository.MediaItemRepository;
 import net.coobird.thumbnailator.Thumbnails;
 import org.apache.commons.codec.binary.StringUtils;
 import org.slf4j.Logger;
@@ -32,6 +34,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -48,29 +51,38 @@ public class MediaItemService {
   private String imgDir;
 
   @Autowired
-  private PhotoRepository photoRepository;
+  private MediaItemRepository mediaItemRepository;
+
+  @Autowired
+  private MediaItemMetaDataRepository mediaItemMetaDataRepository;
 
   @Autowired
   @Qualifier("awsS3Client")
   private S3AsyncClient awsS3Client;
 
 
-  public Mono<MediaItem> getPhotoById(Integer photoId, Map<String, String> params) {
-    return photoRepository.getPhotoById(photoId)
-             .flatMap(photo -> {
-               if (params.containsKey("compressedImage") && params.get("compressedImage").equalsIgnoreCase("true")) {
-                 return setBase64CompressedImage(photo);
-               }
-               if (params.containsKey("originalImage") && params.get("originalImage").equalsIgnoreCase("true")) {
-                 return setBase64OriginalImage(photo);
-               }
-               return Mono.just(photo);
-             });
+  public Mono<MediaItem> getMediaItemById(Integer mediaItemId, Map<String, String> params) {
+    return mediaItemRepository.getMediaItemById(mediaItemId)
+             .flatMap(mediaItem -> setBase64Photo(params, mediaItem))
+             .flatMap(this::setMetaData);
   }
 
 //  public Mono<byte[]> getVideoByTitle(String title) {
 //    return getVideoByTitleS3(title);
 //  }
+
+  public Mono<byte[]> getVideoByTitleS3(String title) {
+    return Mono.fromFuture(() -> {
+      logger.info("FETCHING s3 VIDEO BY title " + title);
+      return awsS3Client.getObject(GetObjectRequest
+                                     .builder()
+                                     .key(title)
+                                     .bucket(S3_BUCKET_NAME)
+                                     .build(), AsyncResponseTransformer.toBytes());
+    })
+             .map(BytesWrapper::asByteArray);
+
+  }
 
   public Flux<MediaItem> getMediaItems(Map<String, String> params, Pageable pageable) {
     return getUserGoogleId()
@@ -79,7 +91,7 @@ public class MediaItemService {
 
   public Mono<MediaItem> createMediaItem(FilePart file) {
     return getUserGoogleId()
-             .flatMap(googleId -> photoRepository.mediaItemExists(googleId, file.filename())
+             .flatMap(googleId -> mediaItemRepository.mediaItemExists(googleId, file.filename())
                                     .flatMap(mediaItem -> {
                                       if (mediaItem.getId() == null) {
                                         return processMediaItem(googleId, file);
@@ -89,11 +101,11 @@ public class MediaItemService {
                                     })
                                     .doOnError(e -> logger.error(e.getMessage()))
                                     .doOnNext(x -> logger.info("finished creating media item {}", x.getTitle()))
-                                    .flatMap(media -> photoRepository.save(media)));
+                                    .flatMap(this::saveMediaItem));
   }
 
   public Mono<Void> deleteMediaItems(List<Integer> ids) {
-    return photoRepository.getPhotosByIds(ids)
+    return mediaItemRepository.getMediaItemsByIds(ids)
              .collectList()
              .flatMap(photos -> {
                var deletePhotos = photos
@@ -122,9 +134,15 @@ public class MediaItemService {
                                            .bucket(S3_BUCKET_NAME)
                                            .build());
 
-               return photoRepository.deleteByPhotoIds(ids).then();
+               return mediaItemRepository.deleteByMediaItemIds(ids).then();
              }).doOnNext(result -> logger.info("Deleted photos from s3"))
              .doOnError(error -> logger.error("Error deleting photos {}, {}", error.getMessage(), ids))
+             .then();
+  }
+
+  public Mono<Void> patchPhotos(List<MediaItem> mediaItems) {
+    return Flux.fromIterable(mediaItems)
+             .flatMap(this::saveMediaItem)
              .then();
   }
 
@@ -133,9 +151,10 @@ public class MediaItemService {
       logger.info("inside setting base64 thumbnail mediaItem {}", mediaItem.getTitle());
       final var key = mediaItem.getMediaType().toLowerCase().equals("photo") ?
                         "thumbnail." + mediaItem.getTitle() :
-                        "thumbnail." + mediaItem.getThumbnailFilePath()
-                                         .substring(mediaItem.getThumbnailFilePath()
-                                                      .lastIndexOf("/") + 1);
+                        mediaItem.getThumbnailFilePath()
+                          .substring(mediaItem.getThumbnailFilePath()
+                                       .lastIndexOf("/") + 1);
+      logger.info("fetching s3 mediaItem by key {}", key);
       return awsS3Client.getObject(GetObjectRequest
                                      .builder()
                                      .key(key)
@@ -184,29 +203,21 @@ public class MediaItemService {
              .subscribeOn(Schedulers.boundedElastic());
   }
 
-  public Mono<Void> patchPhotos(List<MediaItem> mediaItems) {
-    return Flux.fromIterable(mediaItems)
-             .flatMap(p -> photoRepository.save(p))
-             .then();
-  }
 
   public Mono<MediaItem> processGoogleMediaItem(com.google.photos.types.proto.MediaItem mediaItem) {
     return getUserGoogleId().flatMap(googleId -> {
       logger.info("uploading mediaItem {}", mediaItem.getFilename());
-      var tmpDir = new File("/tmp/google_photos/");
-      if (!tmpDir.exists()) {
-        tmpDir.mkdir();
-      }
+
       final var file = new File("/tmp/google_photos/" + mediaItem.getFilename());
       logger.info("processing google media item {}", mediaItem.getFilename());
       final var contentType = getContentType(mediaItem.getFilename().toLowerCase());
       final var mediaType = getMediaType(mediaItem.getMimeType());
       if (mediaType.equalsIgnoreCase("photo")) {
-        return compressGooglePhoto(googleId, file, mediaType, contentType);
+        return pushCompressedGooglePhotoToS3(mediaItem, googleId, file, mediaType, contentType);
       } else {
-        return createGoogleVideo(googleId, file.getName(), contentType);
+        return pushGoogleVideoToS3(mediaItem, googleId, file.getName(), contentType);
       }
-    }).flatMap(m -> photoRepository.save(m))
+    }).flatMap(this::saveMediaItem)
              .doOnError(error -> logger.error("error saving mediaItem {}", mediaItem.getFilename()))
              .doOnNext(x -> logger.info("successfully processed google media item {}", mediaItem.getFilename()));
   }
@@ -214,15 +225,15 @@ public class MediaItemService {
   private Flux<MediaItem> getMediaItems(Map<String, String> params, Pageable pageable, String name) {
 
     if (params.containsKey("albumId")) {
-      return photoRepository
-               .getPhotosByAlbumId(Integer.valueOf(params.get("albumId")), pageable)
-               .flatMap(photo -> setBase64Photo(params, photo))
-               .doOnNext(photos -> logger.info("getMediaItems by albumId: {}", photos.getTitle()));
+      return mediaItemRepository
+               .getMediaItemsByAlbumId(Integer.valueOf(params.get("albumId")), pageable)
+               .flatMap(mediaItem -> setBase64Photo(params, mediaItem))
+               .doOnNext(mediaItem -> logger.info("getMediaItems by albumId: {}", mediaItem.getTitle()));
     } else {
-      return photoRepository
-               .getPhotosByGoogleId(name, pageable)
-               .flatMap(photo -> setBase64Photo(params, photo))
-               .doOnNext(photos -> logger.info("getMediaItems by googleId: {}", photos.getTitle()));
+      return mediaItemRepository
+               .getMediaItemsByGoogleId(name, pageable)
+               .flatMap(mediaItem -> setBase64Photo(params, mediaItem))
+               .doOnNext(mediaItem -> logger.info("getMediaItems by googleId: {}", mediaItem.getTitle()));
     }
   }
 
@@ -233,21 +244,21 @@ public class MediaItemService {
     if (params.containsKey("compressedImage") && params.get("compressedImage").equalsIgnoreCase("true")) {
       return setBase64CompressedImage(mediaItem);
     }
+    if (params.containsKey("originalImage") && params.get("originalImage").equalsIgnoreCase("true")) {
+      return setBase64OriginalImage(mediaItem);
+    }
     return Mono.just(mediaItem);
   }
 
-  public Mono<byte[]> getVideoByTitleS3(String title) {
-    return Mono.fromFuture(() -> {
-      logger.info("FETCHING s3 VIDEO BY title " + title);
-      return awsS3Client.getObject(GetObjectRequest
-                                     .builder()
-                                     .key(title)
-                                     .bucket(S3_BUCKET_NAME)
-                                     .build(), AsyncResponseTransformer.toBytes());
-    })
-             .map(BytesWrapper::asByteArray);
-
+  private Mono<MediaItem> setMetaData(MediaItem mediaItem) {
+    return mediaItemMetaDataRepository.findByMediaItemId(mediaItem.getId())
+             .map(metaData -> {
+               mediaItem.setMediaItemMetaData(metaData);
+               return mediaItem;
+             }).doOnError(error -> logger.error("error finding metadata for mediaItem {} {}", mediaItem.getTitle(), error.getMessage()))
+             .doOnNext(x -> logger.info("got metaData for mediaItem {}", mediaItem.getTitle()));
   }
+
 
   private Mono<MediaItem> processMediaItem(String googleId, FilePart file) {
     final var contentType = getContentType(file.filename().toLowerCase());
@@ -257,9 +268,9 @@ public class MediaItemService {
       tmpDir.mkdir();
     }
     if (mediaType.equalsIgnoreCase("photo")) {
-      return compressPhoto(googleId, file, mediaType, contentType);
+      return pushCompressedPhotoToS3(googleId, file, mediaType, contentType);
     } else {
-      return createVideo(googleId, file, contentType);
+      return pushVideoToS3(googleId, file, contentType);
     }
   }
 
@@ -269,7 +280,7 @@ public class MediaItemService {
              contentType.toLowerCase().endsWith("png") ? "photo" : "video";
   }
 
-  private Mono<MediaItem> createVideo(String googleId, FilePart file, String contentType) {
+  private Mono<MediaItem> pushVideoToS3(String googleId, FilePart file, String contentType) {
     return Mono.fromCallable(() -> {
       final var filePath = imgDir + "/" + file.filename();
       final var tempFile = new File(filePath);
@@ -302,27 +313,27 @@ public class MediaItemService {
              .doOnNext(x -> logger.info("successfully created  video {}", file.filename()));
   }
 
-  private Mono<MediaItem> createGoogleVideo(String googleId, String fileName, String contentType) {
+  private Mono<MediaItem> pushGoogleVideoToS3(com.google.photos.types.proto.MediaItem mediaItem, String googleId, String fileName, String contentType) {
     return Mono.fromCallable(() -> {
       logger.info("creating google video {}", fileName);
       final var filePath = "/tmp/google_photos/" + fileName;
       final var tempFile = new File(filePath);
       final var thumbnailPath = ThumbnailGenerator.randomGrabberFFmpegImage(filePath, 2);
       final var tempThumbnailFile = new File(thumbnailPath);
-      var thumbnailKey = thumbnailPath.substring(thumbnailPath.lastIndexOf("/") + 1);
-      thumbnailKey = thumbnailKey.substring(0, thumbnailKey.lastIndexOf(".")) + ".thumbnail.png";
-      logger.info("pushing google video thumbnail to s3 {}", fileName);
+      var thumbnailKey = "thumbnail." + thumbnailPath.substring(thumbnailPath.lastIndexOf("/") + 1);
+//      thumbnailKey = thumbnailKey.substring(0, thumbnailKey.lastIndexOf(".")) + ".png";
+      logger.info("pushing google video to s3 {}", fileName);
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
                               .key(fileName)
                               .build(), AsyncRequestBody.fromFile(tempFile)).whenComplete((response, err) -> tempFile.delete());
 
-      logger.info("pushing google video to s3 {}", fileName);
+      logger.info("pushing google video thumbnail to s3 {}", fileName);
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
-                              .key("thumbnail." + thumbnailKey)
+                              .key(thumbnailKey) // check key hnanme
                               .build(), AsyncRequestBody.fromFile(tempThumbnailFile)).whenComplete((response, err) -> tempThumbnailFile.delete());
       return MediaItem.newInstanceVideo(fileName,
         S3_BUCKET_BASE_URL + thumbnailKey,
@@ -330,12 +341,13 @@ public class MediaItemService {
         contentType,
         googleId,
         "video",
-        null);
+        mediaItem);
     }).doOnError(error -> logger.error("error creating google video {} {}", fileName, error.getMessage()))
+             .retryBackoff(20, Duration.ofMinutes(2))
              .doOnNext(x -> logger.info("successfully created google video {}", fileName));
   }
 
-  private Mono<MediaItem> compressPhoto(String name, FilePart file, String mediaType, String contentType) {
+  private Mono<MediaItem> pushCompressedPhotoToS3(String name, FilePart file, String mediaType, String contentType) {
     return Mono.fromCallable(() -> {
       var tempFile = File.createTempFile(file.filename(), contentType, new File(imgDir + "/"));
       file.transferTo(tempFile);
@@ -343,35 +355,33 @@ public class MediaItemService {
       byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
       byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
       final var fileName = file.filename();
-      final var thumbnailPath = fileName.substring(0, fileName.lastIndexOf(".")) + ".thumbnail." + contentType;
-      final var compressed = fileName.substring(0, fileName.lastIndexOf(".")) + ".compressed." + contentType;
-      final var originalImagePath = fileName.substring(0, fileName.lastIndexOf(".")) + ".original." + contentType;
-      /**
-       * make aws call async
-       */
+      final var thumbnailKey = "thumbnail." + fileName;
+      final var compressedKey = "compressed." + fileName;
+      final var originalKey = "original." + fileName;
+      logger.info("pushing compressed  photo to s3");
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
-                              .key("compressed." + file.filename())
+                              .key(compressedKey)
                               .build(), AsyncRequestBody.fromBytes(compressedImageResult));
 
-      logger.info("pushing photo to s3");
+      logger.info("pushing thumbnail  photo to s3");
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
-                              .key("thumbnail." + file.filename())
+                              .key(thumbnailKey)
                               .build(), AsyncRequestBody.fromBytes(compressedThumbnailResult));
 
-      logger.info("pushing original photo to s3");
+      logger.info("pushing google  photo to s3");
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
-                              .key("original." + file.filename())
+                              .key(originalKey)
                               .build(), AsyncRequestBody.fromFile(tempFile)).whenComplete((response, err) -> tempFile.delete());
       return MediaItem.newInstancePhoto(file.filename(),
-        S3_BUCKET_BASE_URL + compressed,
-        S3_BUCKET_BASE_URL + originalImagePath,
-        S3_BUCKET_BASE_URL + thumbnailPath,
+        S3_BUCKET_BASE_URL + compressedKey,
+        S3_BUCKET_BASE_URL + originalKey,
+        S3_BUCKET_BASE_URL + thumbnailKey,
         contentType,
         name,
         mediaType,
@@ -381,48 +391,52 @@ public class MediaItemService {
              .doOnNext(x -> logger.info("successfully created photo {}", file.filename()));
   }
 
-  private Mono<MediaItem> compressGooglePhoto(String googleId, File file, String mediaType, String contentType) {
+  private Mono<MediaItem> pushCompressedGooglePhotoToS3(com.google.photos.types.proto.MediaItem mediaItem, String googleId, File file, String mediaType, String contentType) {
     return Mono.fromCallable(() -> {
       var image = ImageIO.read(file);
       byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
       byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
       final var fileName = file.getName();
-      final var thumbnailPath = fileName.substring(0, fileName.lastIndexOf(".")) + ".thumbnail." + contentType;
-      final var compressed = fileName.substring(0, fileName.lastIndexOf(".")) + ".compressed." + contentType;
-      final var originalImagePath = fileName.substring(0, fileName.lastIndexOf(".")) + ".original." + contentType;
-      /**
-       * make aws call async
-       */
-      logger.info("pushing compressed google photo to s3");
+      final var thumbnailKey = "thumbnail." + fileName;
+      final var compressedKey = "compressed." + fileName;
+      final var originalKey = "original." + fileName;
+      logger.info("pushing compressed google photo to s3 {}", fileName);
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
-                              .key("compressed." + file.getName())
-                              .build(), AsyncRequestBody.fromBytes(compressedImageResult));
+                              .key(compressedKey)
+                              .build(), AsyncRequestBody.fromBytes(compressedImageResult)).get();
 
-      logger.info("pushing thumbnail google photo to s3");
+      logger.info("pushing thumbnail google photo to s3 {}", fileName);
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
-                              .key("thumbnail." + file.getName())
-                              .build(), AsyncRequestBody.fromBytes(compressedThumbnailResult));
+                              .key(thumbnailKey)
+                              .build(), AsyncRequestBody.fromBytes(compressedThumbnailResult)).get();
 
-      logger.info("pushing google original photo to s3");
+      logger.info("pushing original google photo to s3 {}", fileName);
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
-                              .key("original." + file.getName())
-                              .build(), AsyncRequestBody.fromFile(file)).whenComplete((response, err) -> file.delete());
+                              .key(originalKey)
+                              .build(), AsyncRequestBody.fromFile(file)).whenComplete((response, err) -> {
+        if (err != null) {
+          logger.error("failed uploading google photo {}", err);
+        }
+        file.delete();
+      });
       return MediaItem.newInstancePhoto(file.getName(),
-        S3_BUCKET_BASE_URL + compressed,
-        S3_BUCKET_BASE_URL + originalImagePath,
-        S3_BUCKET_BASE_URL + thumbnailPath,
+        S3_BUCKET_BASE_URL + compressedKey,
+        S3_BUCKET_BASE_URL + originalKey,
+        S3_BUCKET_BASE_URL + thumbnailKey,
         contentType,
         googleId,
         mediaType,
-        null);
+        mediaItem);
 
-    }).doOnError(error -> logger.error("error creating google photo {} {}", file.getName(), error.getMessage()))
+    })
+             .doOnError(error -> logger.error("error creating google photo {} {}", file.getName(), error.getMessage()))
+             .retryBackoff(20, Duration.ofMinutes(2))
              .doOnNext(x -> logger.info("successfully created google photo {}", file.getName()));
   }
 
@@ -495,5 +509,25 @@ public class MediaItemService {
       return "mkv";
     }
     return "jpg";
+  }
+
+  private Mono<MediaItem> saveMediaItem(MediaItem mediaItem) {
+    return mediaItemRepository.save(mediaItem)
+             .doOnNext(m -> {
+               if (mediaItem.getMediaItemMetaData() != null) {
+                 logger.info("Saving metadata for mediaItem {}", mediaItem.getTitle());
+                 mediaItem.getMediaItemMetaData().setMediaItemId(m.getId());
+                 saveMediaItemMetaData(mediaItem.getMediaItemMetaData());
+               }
+             }).doOnError(error -> logger.error("error saving mediaItem {} {}", mediaItem.getTitle(), error.getMessage()))
+             .doOnNext(x -> logger.info("successfully saved mediaItem {}", mediaItem.getTitle()));
+  }
+
+  private MediaItemMetaData saveMediaItemMetaData(MediaItemMetaData mediaItemMetaData) {
+    return mediaItemMetaDataRepository.save(mediaItemMetaData).block();
+//      .subscribeOn(Schedulers.elastic())
+//      .retryBackoff(20, Duration.ofMinutes(2))
+//      .doOnError(error -> logger.error("error saving metaData for mediaItem {} {}", mediaItemMetaData.getId(), error.getMessage()))
+//      .doOnNext(x -> logger.info("successfully saved metaData {}", mediaItemMetaData.getId()));
   }
 }

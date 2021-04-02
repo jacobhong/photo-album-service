@@ -33,10 +33,10 @@
 //  }
 //
 //  @RequestMapping(value = "/{id}")
-//  public ResponseEntity<MediaItem> getPhotoById(@PathVariable("id") Integer photoId,
+//  public ResponseEntity<MediaItem> getMediaItemById(@PathVariable("id") Integer photoId,
 //                                            @RequestParam(defaultValue = "false", value = "compressedImage") Boolean setcompressedImage) {
 //    logger.info("getting photo by id: {}", photoId);
-//    final var photo = photoService.getPhotoById(photoId, setcompressedImage);
+//    final var photo = photoService.getMediaItemById(photoId, setcompressedImage);
 //
 //    ResponseEntity response;
 //    if (photo.isPresent()) {

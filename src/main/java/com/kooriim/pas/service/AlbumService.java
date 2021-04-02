@@ -2,7 +2,7 @@ package com.kooriim.pas.service;
 
 import com.kooriim.pas.domain.MediaItem;
 import com.kooriim.pas.repository.AlbumRepository;
-import com.kooriim.pas.repository.PhotoRepository;
+import com.kooriim.pas.repository.MediaItemRepository;
 import com.kooriim.pas.domain.Album;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +26,7 @@ public class AlbumService {
   private AlbumRepository albumRepository;
 
   @Autowired
-  private PhotoRepository photoRepository;
+  private MediaItemRepository mediaItemRepository;
 
   @Autowired
   private MediaItemService mediaItemService;
@@ -59,7 +59,7 @@ public class AlbumService {
 //      if (queryParams.containsKey("withPhotos") && queryParams.get("withPhotos").equalsIgnoreCase("true")) {
 //        final var preview = new ArrayList<MediaItem>();
 //        album.setPreviewMediaItems(preview);
-//        getPhotosByAlbumId(albumId)
+//        getMediaItemsByAlbumId(albumId)
 //          .collectList()
 //          .map(photos -> {
 //            photos.forEach(photo -> {
@@ -79,7 +79,7 @@ public class AlbumService {
 //  }
 
   private Flux<MediaItem> getPhotosByAlbumId(Integer albumId) {
-    return photoRepository.getPhotosByAlbumId(albumId, PageRequest.of(0, 4));
+    return mediaItemRepository.getMediaItemsByAlbumId(albumId, PageRequest.of(0, 4));
   }
 
   public Mono<Album> saveOrUpdateAlbum(Album album) {
@@ -95,13 +95,13 @@ public class AlbumService {
   }
 
   public Mono<Void> addPhotosToAlbum(Integer albumId, List<Integer> ids) {
-    return photoRepository.deleteAllPhotosByAlbumId(albumId)
+    return mediaItemRepository.deleteAllMediaItemsByAlbumId(albumId)
              .doOnNext(result -> ids.forEach(id -> albumRepository.savePhotoAlbum(albumId, id)
                .subscribe())).then();
   }
 
   public Mono<Void> deleteAlbum(Integer albumId) {
-    return this.photoRepository.deleteAllPhotosByAlbumId(albumId)
+    return this.mediaItemRepository.deleteAllMediaItemsByAlbumId(albumId)
       .flatMap(result -> this.albumRepository.deleteById(albumId).then())
              .then();
 
