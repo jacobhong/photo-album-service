@@ -60,3 +60,4 @@ require-ssl: ${REQUIRE_SSL}
 allowed-origin: ${ALLOWED_ORIGIN}
 s3:
   bucketName: ${BUCKET_NAME}
+baseKeycloakUrl: ${BASE_KEYCLOAK_URL}
