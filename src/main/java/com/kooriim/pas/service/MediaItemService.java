@@ -64,7 +64,7 @@ public class MediaItemService {
   public Mono<MediaItem> getMediaItemById(Integer mediaItemId, Map<String, String> params) {
     return mediaItemRepository.getMediaItemById(mediaItemId)
              .flatMap(mediaItem -> setBase64Photo(params, mediaItem))
-             .flatMap(this::setMetaData);
+             .doOnNext(this::setMetaData);
   }
 
 //  public Mono<byte[]> getVideoByTitle(String title) {

@@ -43,7 +43,6 @@ public class MediaItemMetaDataRepository {
                                      .getSingleResult())
              .cast(MediaItemMetaData.class)
              .doOnNext(mediaItemMetaData -> logger.info("Got mediaItemMetaData {}", mediaItemMetaData.getId()))
-             .doOnError(error -> logger.error("Error getting mediaItemMetaData {}", error.getMessage()))
              .onErrorResume(e -> Mono.empty())
              .subscribeOn(Schedulers.boundedElastic());
   }

@@ -190,7 +190,7 @@ public class MediaItem implements Serializable {
     photo.setTitle(fileName);
     photo.setGoogleId(googleId);
     photo.setMediaType(mediaType);
-    if (mediaItem.getMediaMetadata() != null) {
+    if (mediaItem != null && mediaItem.getMediaMetadata() != null) {
       final var mediaItemMetaData = new MediaItemMetaData(mediaItem.getMediaMetadata());
       photo.setMediaItemMetaData(mediaItemMetaData);
     }
@@ -205,8 +205,10 @@ public class MediaItem implements Serializable {
     video.setTitle(fileName);
     video.setGoogleId(googleId);
     video.setMediaType(mediaType);
-    final var mediaItemMetaData = new MediaItemMetaData(mediaItem.getMediaMetadata());
-    video.setMediaItemMetaData(mediaItemMetaData);
+    if (mediaItem != null && mediaItem.getMediaMetadata() != null) {
+      final var mediaItemMetaData = new MediaItemMetaData(mediaItem.getMediaMetadata());
+      video.setMediaItemMetaData(mediaItemMetaData);
+    }
     return video;
   }
 
