@@ -52,16 +52,18 @@ public class GoogleService {
   @Autowired
   private MediaItemRepository mediaItemRepository;
 
+  /**
+   * Download all MediaItems from google, upload to s3 and save record to database. Need add delay here
+   * because google api limits how often we call them
+   */
   public Flux<com.kooriim.pas.domain.MediaItem> syncGooglePhotos() {
     return getUserAccessToken()
              .flatMap(accessToken -> getGoogleIdentityToken(accessToken))
              .flatMap(identityToken -> initializeS3PhotosLibraryClient(identityToken))
              .flatMapMany(photosLibraryClient -> getGooglePhotos(photosLibraryClient))
-             .delayElements(Duration.ofSeconds(2))
+             .delayUntil(d -> Mono.delay(Duration.ofSeconds(3)))
              .flatMap(mediaItem -> downloadGoogleMediaItem(mediaItem))
-             .delayElements(Duration.ofSeconds(2))
              .flatMap(mediaItem -> uploadMediaItem(mediaItem))
-             .delayElements(Duration.ofSeconds(2))
              .subscribeOn(Schedulers.elastic());
   }
 
@@ -103,6 +105,7 @@ public class GoogleService {
         index++;
         // store index  or date of last itemand try later
       }
+      logger.info("returning google list size {}", list.size());
       return Flux.fromIterable(list);
     }).doOnError((e) -> logger.error("error getting google photos {}", e.getMessage()))
 //             .doOnNext(x -> logger.info("finished getting photos from google"))
