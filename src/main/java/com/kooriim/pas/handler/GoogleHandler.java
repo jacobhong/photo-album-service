@@ -11,6 +11,7 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Service
 public class GoogleHandler {
@@ -31,9 +32,12 @@ public class GoogleHandler {
 //    return photoService.getMediaItems(queryParams.toSingleValueMap(), pageable)
 //             .collectList()
 //             .flatMap(photos -> ServerResponse.ok().bodyValue(photos));
+//    googleService.syncGooglePhotos().collectList().flatMap(x -> Mono.empty()).subscribe();
+//    return ServerResponse.ok().build();
+
     return googleService.syncGooglePhotos()
-             .collectList()
-             .flatMap(x -> ServerResponse.ok().bodyValue(x));
+             .publishOn(Schedulers.elastic())
+             .collectList().flatMap(x -> ServerResponse.ok().build());
   }
 
 }

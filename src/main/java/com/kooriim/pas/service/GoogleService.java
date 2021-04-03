@@ -5,6 +5,7 @@ import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.UserCredentials;
 import com.google.photos.library.v1.PhotosLibraryClient;
 import com.google.photos.library.v1.PhotosLibrarySettings;
+import com.google.photos.library.v1.proto.ListMediaItemsRequest;
 import com.google.photos.types.proto.MediaItem;
 import com.kooriim.pas.domain.IdentityToken;
 import com.kooriim.pas.repository.MediaItemRepository;
@@ -81,7 +82,10 @@ public class GoogleService {
     return Flux.defer(() -> {
       logger.info("getting google photos.. may take awhile");
 
-      final var listMediaItemsPagedResponse = photosLibraryClient.listMediaItems();
+      final var listMediaItemsPagedResponse = photosLibraryClient.listMediaItems(ListMediaItemsRequest
+                                                                                   .newBuilder()
+                                                                                   .setPageSize(100)
+                                                                                   .build());
       logger.info("response {}", listMediaItemsPagedResponse);
       final var list = new ArrayList<MediaItem>();
       listMediaItemsPagedResponse.getPage()
