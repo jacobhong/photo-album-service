@@ -9,9 +9,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+
+import java.time.Duration;
+import java.util.List;
 
 @Service
 public class GoogleHandler {
@@ -34,10 +38,14 @@ public class GoogleHandler {
 //             .flatMap(photos -> ServerResponse.ok().bodyValue(photos));
 //    googleService.syncGooglePhotos().collectList().flatMap(x -> Mono.empty()).subscribe();
 //    return ServerResponse.ok().build();
+    googleService.syncGooglePhotos(serverRequest
+                                     .headers()
+                                     .header("Authorization")
+                                     .get(0)
+                                     .split(" ")[1])
+      .subscribe();
+    return ServerResponse.ok().build();
 
-    return googleService.syncGooglePhotos()
-             .publishOn(Schedulers.elastic())
-             .collectList().flatMap(x -> ServerResponse.ok().build());
   }
 
 }

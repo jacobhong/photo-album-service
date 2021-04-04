@@ -218,7 +218,7 @@ public class MediaItemService {
         return pushGoogleVideoToS3(mediaItem, googleId, file.getName(), contentType);
       }
     }).flatMap(this::saveMediaItem)
-             .doOnError(error -> logger.error("error saving mediaItem {}", mediaItem.getFilename()))
+             .doOnError(error -> logger.error("error saving mediaItem {} {}", mediaItem.getFilename(), error.getMessage()))
              .doOnNext(x -> logger.info("successfully processed google media item {}", mediaItem.getFilename()));
   }
 
@@ -343,7 +343,7 @@ public class MediaItemService {
         "video",
         mediaItem);
     }).doOnError(error -> logger.error("error creating google video {} {}", fileName, error.getMessage()))
-             .retryBackoff(20, Duration.ofMinutes(2))
+             .retryBackoff(20, Duration.ofMinutes(1))
              .doOnNext(x -> logger.info("successfully created google video {}", fileName));
   }
 
@@ -435,8 +435,8 @@ public class MediaItemService {
         mediaItem);
 
     })
-             .doOnError(error -> logger.error("error creating google photo {} {}", file.getName(), error.getMessage()))
-             .retryBackoff(20, Duration.ofMinutes(2))
+             .doOnError(error -> logger.error("error creating google photo {} {}", file.getName(), error))
+             .retryBackoff(20, Duration.ofMinutes(1))
              .doOnNext(x -> logger.info("successfully created google photo {}", file.getName()));
   }
 

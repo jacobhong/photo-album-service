@@ -55,13 +55,14 @@ public class GoogleService {
   /**
    * Download all MediaItems from google, upload to s3 and save record to database. Need add delay here
    * because google api limits how often we call them
+   *
+   * @return
    */
-  public Flux<com.kooriim.pas.domain.MediaItem> syncGooglePhotos() {
-    return getUserAccessToken()
-             .flatMap(accessToken -> getGoogleIdentityToken(accessToken))
-             .flatMap(identityToken -> initializeS3PhotosLibraryClient(identityToken))
+  public Flux<com.kooriim.pas.domain.MediaItem> syncGooglePhotos(String accessToken) {
+    return getGoogleIdentityToken(accessToken)
+             .flatMap(this::initializeS3PhotosLibraryClient)
              .flatMapMany(photosLibraryClient -> getGooglePhotos(photosLibraryClient))
-             .delayUntil(d -> Mono.delay(Duration.ofSeconds(3)))
+             .delayUntil(d -> Mono.delay(Duration.ofSeconds(5)))
              .flatMap(mediaItem -> downloadGoogleMediaItem(mediaItem))
              .flatMap(mediaItem -> uploadMediaItem(mediaItem))
              .subscribeOn(Schedulers.elastic());
@@ -171,7 +172,7 @@ public class GoogleService {
       ImageIO.write(image, contentType, outputfile);
       return mediaItem;
     }).doOnError(error -> logger.error("error downloading image from google {} {}", mediaItem.getFilename(), error.getMessage()))
-             .retryBackoff(20, Duration.ofMinutes(2))
+             .retryBackoff(20, Duration.ofMinutes(1))
              .doOnNext(x -> logger.info("downloaded image from google {}", mediaItem.getFilename()));
   }
 
@@ -185,7 +186,7 @@ public class GoogleService {
         .transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
       return mediaItem;
     }).doOnError(error -> logger.error("error downloading video from google {} {}", mediaItem.getFilename(), error.getMessage()))
-             .retryBackoff(20, Duration.ofMinutes(2))
+             .retryBackoff(20, Duration.ofMinutes(1))
              .doOnNext(x -> logger.info("downloaded video from google {}", mediaItem.getFilename()));
   }
 
@@ -217,7 +218,7 @@ public class GoogleService {
     return "jpg";
   }
 
-  private Mono<String> getUserAccessToken() {
+  public Mono<String> getUserAccessToken() {
     return ReactiveSecurityContextHolder
              .getContext()
              .doOnError(error -> logger.error("error authorizing user context {}", error))
