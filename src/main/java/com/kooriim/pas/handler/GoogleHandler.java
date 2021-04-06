@@ -38,14 +38,10 @@ public class GoogleHandler {
 //             .flatMap(photos -> ServerResponse.ok().bodyValue(photos));
 //    googleService.syncGooglePhotos().collectList().flatMap(x -> Mono.empty()).subscribe();
 //    return ServerResponse.ok().build();
-    googleService.syncGooglePhotos(serverRequest
-                                     .headers()
-                                     .header("Authorization")
-                                     .get(0)
-                                     .split(" ")[1])
-      .subscribe();
-    return ServerResponse.ok().build();
 
+    return googleService.syncGooglePhotos()
+             .publishOn(Schedulers.elastic())
+             .collectList().flatMap(x -> ServerResponse.ok().build());
   }
 
 }
