@@ -52,31 +52,39 @@ public class GoogleService {
   @Autowired
   private MediaItemRepository mediaItemRepository;
 
-  public Flux<com.kooriim.pas.domain.MediaItem> syncGooglePhotos() {
-    return getUserAccessToken()
-             .flatMap(accessToken -> getGoogleIdentityToken(accessToken))
-             .flatMap(identityToken -> initializeS3PhotosLibraryClient(identityToken))
-             .flatMapMany(photosLibraryClient -> getGooglePhotos(photosLibraryClient))
-             .delayUntil(d -> Mono.delay(Duration.ofSeconds(5)))
-             .flatMap(mediaItem -> downloadGoogleMediaItem(mediaItem))
-             .flatMap(mediaItem -> uploadMediaItem(mediaItem))
-             .subscribeOn(Schedulers.elastic());
+  /**
+   * Download all MediaItems from google, upload to s3 and save record to database. Need add delay here
+   * because google api limits how often we call them
+   *
+   * @param accessToken
+   * @return
+   */
+  public Flux<com.kooriim.pas.domain.MediaItem> syncGooglePhotos(Jwt accessToken) {
+//    return getUserAccessToken()
+    return getGoogleIdentityToken(accessToken)
+             .flatMap(this::initializeS3PhotosLibraryClient)
+             .flatMapMany(photosLibraryClient -> getGooglePhotos(accessToken, photosLibraryClient)
+                                                   .delayUntil(d -> Mono.delay(Duration.ofSeconds(6)))
+                                                   .flatMap(mediaItem -> downloadGoogleMediaItem(photosLibraryClient, accessToken, mediaItem))
+                                                   .flatMap(mediaItem -> uploadMediaItem(accessToken, mediaItem))
+                                                   .subscribeOn(Schedulers.elastic()));
   }
 
-  public Mono<IdentityToken> getGoogleIdentityToken(String accessToken) {
+  public Mono<IdentityToken> getGoogleIdentityToken(Jwt accessToken) {
     logger.info("getting google identity token");
     // refresh tokens?
     return webClient.get()
              .uri("/auth/realms/kooriim-fe/broker/google/token")
              .accept(MediaType.APPLICATION_JSON)
-             .header("Authorization", "Bearer " + accessToken)
+             .header("Authorization", "Bearer " + accessToken.getTokenValue())
              .retrieve()
              .bodyToMono(IdentityToken.class)
              .doOnError(error -> logger.error("Error getting google identity token {}", error.getMessage()))
-             .doOnNext(x -> logger.info("got google identity token"));
+             .doOnNext(x -> logger.info("got google identity token {}", x));
   }
 
-  private Flux<MediaItem> getGooglePhotos(PhotosLibraryClient photosLibraryClient) {
+  // TODO sync by date range?
+  private Flux<MediaItem> getGooglePhotos(Jwt accessToken, PhotosLibraryClient photosLibraryClient) {
     return Flux.defer(() -> {
       logger.info("getting google photos.. may take awhile");
 
@@ -89,6 +97,7 @@ public class GoogleService {
       listMediaItemsPagedResponse.getPage()
         .getValues()
         .forEach(mediaItem -> list.add(mediaItem));
+
       var nextPageToken = listMediaItemsPagedResponse.getNextPageToken();
       var nextPage = listMediaItemsPagedResponse.getPage().getNextPage();
       var index = 0; // TODO batch get here instead
@@ -129,44 +138,55 @@ public class GoogleService {
              .doOnNext(x -> logger.info("successfully initialized photos library client"));
   }
 
-  private Mono<MediaItem> downloadGoogleMediaItem(MediaItem mediaItem) {
+  private Mono<MediaItem> downloadGoogleMediaItem(PhotosLibraryClient photosLibraryClient, Jwt accessToken, MediaItem mediaItem) {
 //    logger.info("checking if media item already exists{}", mediaItem.getFilename());
-    return mediaItemService.getUserGoogleId()
-             .flatMap(googleId -> mediaItemRepository.mediaItemExists(googleId, mediaItem.getFilename())
-                                    .flatMap(exists -> {
-                                      if (exists.getId() == null) {
-                                        var contentType = getContentType(mediaItem.getMimeType());
-                                        var mediaType = mediaItemService.getMediaType(mediaItem.getMimeType());
+//    return mediaItemService.getUserGoogleId()
+//             .flatMap(googleId ->
+    return mediaItemRepository.mediaItemExists(accessToken.getClaimAsString("sub"), mediaItem.getFilename())
+             .flatMap(exists -> {
+               if (exists.getId() == null) {
+                 var contentType = getContentType(mediaItem.getMimeType());
+                 var mediaType = mediaItemService.getMediaType(mediaItem.getMimeType());
 //                                        if (mediaType.equalsIgnoreCase("photo")) return Mono.empty();
-                                        final var googleTempDir = new File("/tmp/google_photos");
-                                        if (!googleTempDir.exists()) {
-                                          googleTempDir.mkdirs();
-                                        }
-                                        if (mediaType.equalsIgnoreCase("photo")) {
-                                          return downloadImage(mediaItem, contentType);
-                                        } else {
+                 final var googleTempDir = new File("/tmp/google_photos");
+                 if (!googleTempDir.exists()) {
+                   googleTempDir.mkdirs();
+                 }
+                 if (mediaType.equalsIgnoreCase("photo")) {
+                   return downloadImage(photosLibraryClient, mediaItem, contentType);
+                 } else {
 //                                          logger.info("medaItem does not exist, downloading {}", mediaItem.getFilename());
-                                          return downloadVideo(mediaItem);
-                                        }
-                                      }
+                   return downloadVideo(mediaItem);
+                 }
+               }
 //                                      logger.info("SKIPPING DUPLICATE MEDIAITEM {}", mediaItem.getFilename());
 //                                      throw new ConflictException("skipping google mediaItem because duplicate exists " + mediaItem.getFilename());
-                                      return Mono.empty();
-                                    }));
+               return Mono.empty();
+             });
 
   }
 
-  private Mono<MediaItem> downloadImage(MediaItem mediaItem, String contentType) {
+  private Mono<MediaItem> downloadImage(PhotosLibraryClient photosLibraryClient, MediaItem mediaItem, String contentType) {
     return Mono.fromCallable(() -> {
       logger.info("Downloading image {}", mediaItem.getFilename());
       var width = mediaItem.getMediaMetadata().getWidth();
       var height = mediaItem.getMediaMetadata().getHeight();
       BufferedImage image = null;
-      image = ImageIO.read(new URL(mediaItem.getBaseUrl() + "=w" + width + "-h" + height));
+      try {
+        image = ImageIO.read(new URL(mediaItem.getBaseUrl() + "=w" + width + "-h" + height));
+      } catch (Exception e) {
+        if (e.getMessage().equalsIgnoreCase("Can't get input stream from URL")) {
+          final var result = photosLibraryClient.getMediaItem(mediaItem.getId());
+          image = ImageIO.read(new URL(result.getBaseUrl() + "=w" + width + "-h" + height));
+        } else {
+          throw e;
+        }
+      }
       File outputfile = new File("/tmp/google_photos/" + mediaItem.getFilename());
       ImageIO.write(image, contentType, outputfile);
+      image = null;
       return mediaItem;
-    }).doOnError(error -> logger.error("error downloading image from google {} {}", mediaItem.getFilename(), error.getMessage()))
+    }).doOnError(error -> logger.error("error downloading image from google {} {}", mediaItem.getFilename(), error))
              .retryBackoff(20, Duration.ofMinutes(1))
              .doOnNext(x -> logger.info("downloaded image from google {}", mediaItem.getFilename()));
   }
@@ -179,17 +199,21 @@ public class GoogleService {
       FileOutputStream fileOutputStream = new FileOutputStream("/tmp/google_photos/" + mediaItem.getFilename());
       fileOutputStream.getChannel()
         .transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
+      fileOutputStream.close();
       return mediaItem;
-    }).doOnError(error -> logger.error("error downloading video from google {} {}", mediaItem.getFilename(), error.getMessage()))
+    }).doOnError(error -> logger.error("error downloading video from google {} {}", mediaItem.getFilename(), error))
              .retryBackoff(20, Duration.ofMinutes(1))
              .doOnNext(x -> logger.info("downloaded video from google {}", mediaItem.getFilename()));
   }
 
-  private Mono<com.kooriim.pas.domain.MediaItem> uploadMediaItem(MediaItem mediaItem) {
+  private Mono<com.kooriim.pas.domain.MediaItem> uploadMediaItem(Jwt accessToken, MediaItem mediaItem) {
     if (mediaItem.getId() == null) {
       return Mono.empty();
     }
-    return mediaItemService.processGoogleMediaItem(mediaItem);
+    return mediaItemService.processGoogleMediaItem(accessToken, mediaItem)
+             .flatMap(mediaItemService::saveMediaItem)
+             .doOnError(error -> logger.error("error saving mediaItem {} {}", mediaItem.getFilename(), error.getMessage()))
+             .doOnNext(x -> logger.info("successfully processed google media item {}", mediaItem.getFilename()));
   }
 
   private String getContentType(String mimeType) {

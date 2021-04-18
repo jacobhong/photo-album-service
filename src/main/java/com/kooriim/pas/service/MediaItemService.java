@@ -17,6 +17,7 @@ import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -204,22 +205,22 @@ public class MediaItemService {
   }
 
 
-  public Mono<MediaItem> processGoogleMediaItem(com.google.photos.types.proto.MediaItem mediaItem) {
-    return getUserGoogleId().flatMap(googleId -> {
-      logger.info("uploading mediaItem {}", mediaItem.getFilename());
+  public Mono<MediaItem> processGoogleMediaItem(Jwt accessToken, com.google.photos.types.proto.MediaItem mediaItem) {
+//    return getUserGoogleId().flatMap(googleId -> {
+    logger.info("uploading mediaItem {}", mediaItem.getFilename());
 
-      final var file = new File("/tmp/google_photos/" + mediaItem.getFilename());
-      logger.info("processing google media item {}", mediaItem.getFilename());
-      final var contentType = getContentType(mediaItem.getFilename().toLowerCase());
-      final var mediaType = getMediaType(mediaItem.getMimeType());
-      if (mediaType.equalsIgnoreCase("photo")) {
-        return pushCompressedGooglePhotoToS3(mediaItem, googleId, file, mediaType, contentType);
-      } else {
-        return pushGoogleVideoToS3(mediaItem, googleId, file.getName(), contentType);
-      }
-    }).flatMap(this::saveMediaItem)
-             .doOnError(error -> logger.error("error saving mediaItem {} {}", mediaItem.getFilename(), error.getMessage()))
-             .doOnNext(x -> logger.info("successfully processed google media item {}", mediaItem.getFilename()));
+    final var file = new File("/tmp/google_photos/" + mediaItem.getFilename());
+    logger.info("processing google media item {}", mediaItem.getFilename());
+    final var contentType = getContentType(mediaItem.getFilename().toLowerCase());
+    final var mediaType = getMediaType(mediaItem.getMimeType());
+    if (mediaType.equalsIgnoreCase("photo")) {
+      return pushCompressedGooglePhotoToS3(mediaItem, accessToken.getClaimAsString("sub"), file, mediaType, contentType);
+    } else {
+      return pushGoogleVideoToS3(mediaItem, accessToken.getClaimAsString("sub"), file.getName(), contentType);
+    }
+//    }).flatMap(this::saveMediaItem)
+//             .doOnError(error -> logger.error("error saving mediaItem {} {}", mediaItem.getFilename(), error.getMessage()))
+//             .doOnNext(x -> logger.info("successfully processed google media item {}", mediaItem.getFilename()));
   }
 
   private Flux<MediaItem> getMediaItems(Map<String, String> params, Pageable pageable, String name) {
@@ -406,6 +407,7 @@ public class MediaItemService {
                               .bucket(S3_BUCKET_NAME)
                               .key(compressedKey)
                               .build(), AsyncRequestBody.fromBytes(compressedImageResult)).get();
+      compressedImageResult = null;
 
       logger.info("pushing thumbnail google photo to s3 {}", fileName);
       awsS3Client.putObject(PutObjectRequest
@@ -413,7 +415,7 @@ public class MediaItemService {
                               .bucket(S3_BUCKET_NAME)
                               .key(thumbnailKey)
                               .build(), AsyncRequestBody.fromBytes(compressedThumbnailResult)).get();
-
+      compressedThumbnailResult = null;
       logger.info("pushing original google photo to s3 {}", fileName);
       awsS3Client.putObject(PutObjectRequest
                               .builder()
@@ -511,23 +513,23 @@ public class MediaItemService {
     return "jpg";
   }
 
-  private Mono<MediaItem> saveMediaItem(MediaItem mediaItem) {
+  public Mono<MediaItem> saveMediaItem(MediaItem mediaItem) {
     return mediaItemRepository.save(mediaItem)
              .doOnNext(m -> {
                if (mediaItem.getMediaItemMetaData() != null) {
                  logger.info("Saving metadata for mediaItem {}", mediaItem.getTitle());
                  mediaItem.getMediaItemMetaData().setMediaItemId(m.getId());
-                 saveMediaItemMetaData(mediaItem.getMediaItemMetaData());
+                 saveMediaItemMetaData(mediaItem.getMediaItemMetaData()).subscribe();
                }
              }).doOnError(error -> logger.error("error saving mediaItem {} {}", mediaItem.getTitle(), error.getMessage()))
              .doOnNext(x -> logger.info("successfully saved mediaItem {}", mediaItem.getTitle()));
   }
 
-  private MediaItemMetaData saveMediaItemMetaData(MediaItemMetaData mediaItemMetaData) {
-    return mediaItemMetaDataRepository.save(mediaItemMetaData).block();
-//      .subscribeOn(Schedulers.elastic())
-//      .retryBackoff(20, Duration.ofMinutes(2))
-//      .doOnError(error -> logger.error("error saving metaData for mediaItem {} {}", mediaItemMetaData.getId(), error.getMessage()))
-//      .doOnNext(x -> logger.info("successfully saved metaData {}", mediaItemMetaData.getId()));
+  private Mono<MediaItemMetaData> saveMediaItemMetaData(MediaItemMetaData mediaItemMetaData) {
+    return mediaItemMetaDataRepository.save(mediaItemMetaData)
+             .subscribeOn(Schedulers.elastic())
+             .retryBackoff(20, Duration.ofMinutes(2))
+             .doOnError(error -> logger.error("error saving metaData for mediaItem {} {}", mediaItemMetaData.getId(), error.getMessage()))
+             .doOnNext(x -> logger.info("successfully saved metaData {}", x.getId()));
   }
 }

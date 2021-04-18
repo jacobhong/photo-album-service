@@ -2,12 +2,17 @@ plugins {
 	id 'org.springframework.boot' version '2.2.1.RELEASE'
 	id 'io.spring.dependency-management' version '1.0.8.RELEASE'
 	id 'java'
+	id 'java-library'
+//	id 'org.bytedeco.gradle-javacpp-build' version "1.5.5"
+	id 'org.bytedeco.gradle-javacpp-platform' version "1.5.5"
 }
 
 group = 'com.webapp.starter'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '11'
-
+ext {
+	javacppPlatform = 'macosx-x86_64,linux-x86_64' // or any other platform, defaults to Loader.getPlatform()
+}
 allprojects {
 	repositories {
 		jcenter()
@@ -25,14 +30,12 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.security:spring-security-oauth2-jose'
 	implementation 'org.springframework.security:spring-security-oauth2-resource-server'
-	implementation group: 'org.bytedeco', name: 'javacv-platform', version: '1.5.5'
-
+	api "org.bytedeco:javacv-platform:1.5.5" // or any other "-platform" artifacts
 	compile 'com.google.photos.library:google-photos-library-client:1.6.0'
 
 	implementation platform('software.amazon.awssdk:bom:2.16.29')
 	implementation 'software.amazon.awssdk:s3'
 	implementation 'software.amazon.awssdk:netty-nio-client'
-//
 	compile group: 'net.coobird', name: 'thumbnailator', version: '0.4.8'
 	compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.19'
 	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.11'
@@ -67,4 +70,21 @@ dependencyManagement {
 
 springBoot {
 	buildInfo()
+}
+
+task depsize  {
+	doLast {
+		final formatStr = "%,10.2f"
+		final conf = configurations.default
+		final size = conf.collect { it.length() / (1024 * 1024) }.sum()
+		final out = new StringBuffer()
+		out << 'Total dependencies size:'.padRight(45)
+		out << "${String.format(formatStr, size)} Mb\n\n"
+		conf.sort { -it.length() }
+				.each {
+					out << "${it.name}".padRight(45)
+					out << "${String.format(formatStr, (it.length() / 1024))} kb\n"
+				}
+		println(out)
+	}
 }

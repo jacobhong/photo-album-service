@@ -4,25 +4,23 @@ import com.kooriim.pas.service.GoogleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
-import reactor.core.publisher.ConnectableFlux;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-
-import java.time.Duration;
-import java.util.List;
 
 @Service
 public class GoogleHandler {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
+  private NimbusJwtDecoder jwtDecoder;
 
   @Autowired
   private GoogleService googleService;
+
+  @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
+  private String jwkSetUri;
 
   public Mono<ServerResponse> syncGooglePhotos(final ServerRequest serverRequest) {
     logger.info("syncing google photos {}", serverRequest.queryParams());
@@ -38,10 +36,18 @@ public class GoogleHandler {
 //             .flatMap(photos -> ServerResponse.ok().bodyValue(photos));
 //    googleService.syncGooglePhotos().collectList().flatMap(x -> Mono.empty()).subscribe();
 //    return ServerResponse.ok().build();
+    // TODO figure out how to do differently
+    var token = serverRequest
+      .headers()
+      .header("Authorization")
+      .get(0)
+      .split(" ")[1];
+    jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+    var jwt = this.jwtDecoder.decode(token);
+    googleService.syncGooglePhotos(jwt).subscribe();
 
-    return googleService.syncGooglePhotos()
-             .publishOn(Schedulers.elastic())
-             .collectList().flatMap(x -> ServerResponse.ok().build());
+    return ServerResponse.ok().build();
+
   }
 
 }
