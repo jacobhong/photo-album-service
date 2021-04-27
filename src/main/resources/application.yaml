@@ -27,7 +27,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/pas?zeroDateTimeBehavior=convertToNull
     username: user131
-    password: pw131 # env variable this
+    password: password131 # env variable this
     driver-class-name: com.mysql.jdbc.Driver
   jpa:
     properties:
@@ -60,3 +60,6 @@ logging:
     org:
       springframework: DEBUG
 baseKeycloakUrl: https://192.168.1.206.xip.io:8443
+google:
+  clientId: 36443888483-nltubgbdq78spoj2ebvaibem942f0r07.apps.googleusercontent.com
+  clientSecret: BbOZZ21fg5-fH4t1NSoapwjF

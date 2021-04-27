@@ -39,6 +39,7 @@ services:
   keycloak:
     image: jboss/keycloak
     environment:
+      JAVA_OPTS_APPEND: -Dkeycloak.profile=preview
       KEYCLOAK_USER: keycloak131
       KEYCLOAK_PASSWORD: password131
       DB_PORT: 3306
