@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 public class MediaItemService {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
   private static final String S3_BUCKET_BASE_URL = "https://kooriim-images.s3-us-west-1.amazonaws.com/";
+
   @Value("${s3.bucketName}")
   private String S3_BUCKET_NAME;
 

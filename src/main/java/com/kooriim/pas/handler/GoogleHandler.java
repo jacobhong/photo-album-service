@@ -45,10 +45,10 @@ public class GoogleHandler {
       .header("Authorization")
       .get(0)
       .split(" ")[1];
-    var refresh = serverRequest
-                        .headers()
-                        .header("refresh")
-                        .get(0);
+//    var refresh = serverRequest
+//                        .headers()
+//                        .header("refresh")
+//                        .get(0);
 //    jwtDecoder =  NimbusJwtDecoder.withSecretKey(new SecretKeySpec("gI02EpNeYIiQKWiH1ywGQZl-TSbP7trHez-OdV1OVciXigL3z1vyKWmvjUAR74M4TiNg_mU7h6QHHWjnSu9EdQ".getBytes(), "HS256")).macAlgorithm(MacAlgorithm.HS256).build();
 
     jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
