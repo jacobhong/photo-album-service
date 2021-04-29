@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;
 
-public class GoogleTokenExchangeResponse implements Serializable {
+public class GoogleTokenResponse implements Serializable {
   @JsonProperty("access_token")
   public String accessToken;
 
@@ -105,7 +105,7 @@ public class GoogleTokenExchangeResponse implements Serializable {
 
   @Override
   public String toString() {
-    return "GoogleTokenExchangeResponse{" +
+    return "GoogleTokenResponse{" +
              "accessToken='" + accessToken + '\'' +
              ", refreshToken='" + refreshToken + '\'' +
              ", expiresIn='" + expiresIn + '\'' +

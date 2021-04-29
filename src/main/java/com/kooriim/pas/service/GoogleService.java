@@ -6,21 +6,19 @@ import com.google.api.client.util.Clock;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.http.HttpTransportFactory;
 import com.google.auth.oauth2.AccessToken;
-import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.UserCredentials;
 import com.google.photos.library.v1.PhotosLibraryClient;
 import com.google.photos.library.v1.PhotosLibrarySettings;
 import com.google.photos.library.v1.proto.DateFilter;
 import com.google.photos.library.v1.proto.Filters;
-import com.google.photos.library.v1.proto.GetMediaItemRequest;
 import com.google.photos.library.v1.proto.ListMediaItemsRequest;
 import com.google.photos.types.proto.DateRange;
 import com.google.photos.types.proto.MediaItem;
-import com.kooriim.pas.domain.GoogleTokenExchangeRequest;
-import com.kooriim.pas.domain.GoogleTokenExchangeResponse;
-import com.kooriim.pas.domain.MediaItemWithIdentityToken;
+import com.kooriim.pas.domain.GoogleTokenResponse;
+import com.kooriim.pas.domain.MediaItemWithGoogleToken;
 import com.kooriim.pas.repository.MediaItemRepository;
 import org.apache.commons.lang3.StringUtils;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,11 +27,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.parameters.P;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -43,8 +39,6 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -53,6 +47,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * alpha testing
@@ -87,55 +82,51 @@ public class GoogleService {
    * @return
    */
   public Flux<com.kooriim.pas.domain.MediaItem> syncGooglePhotos(Jwt accessToken) {
-//    return getUserAccessToken()
     return getGoogleIdentityToken(accessToken)
-             .flatMap(this::initializeS3PhotosLibraryClient)
-             .flatMapMany(map -> getGooglePhotos(map))
+             .flatMap(googleTokenResponse -> init(googleTokenResponse, accessToken))
+             .flatMapMany(this::getGooglePhotos)
              .delayUntil(d -> Mono.delay(Duration.ofSeconds(6)))
              .flatMap(mediaItem -> downloadGoogleMediaItem(accessToken, mediaItem))
-             .flatMap(mediaItem -> uploadMediaItem(accessToken, mediaItem))
+             .flatMap(mediaItem -> mediaItemService.processGoogleMediaItem(accessToken, mediaItem))
+             .flatMap(mediaItemService::saveMediaItem)
              .subscribeOn(Schedulers.elastic());
   }
 
-  public Mono<GoogleTokenExchangeResponse> getGoogleIdentityToken(Jwt accessToken) {
+  private Mono<GoogleTokenResponse> getGoogleIdentityToken(Jwt accessToken) {
     logger.info("getting google identity token");
-    // refresh tokens?
     return webClient.get()
              .uri("/auth/realms/kooriim-fe/broker/google/token?access_type=offline")
              .accept(MediaType.APPLICATION_JSON)
              .header("Authorization", "Bearer " + accessToken.getTokenValue())
              .retrieve()
-             .bodyToMono(GoogleTokenExchangeResponse.class)
+             .bodyToMono(GoogleTokenResponse.class)
              .doOnError(error -> logger.error("Error getting google identity token {}", error.getMessage()))
              .doOnNext(token -> logger.info("got token {}", token));
-//             .flatMap(identityToken -> refreshExchangeGoogle(identityToken));
-//             .flatMap(identityToken -> refreshExchangeGoogle(identityToken));
   }
 
-  public Mono<GoogleTokenExchangeResponse> tokenExchangeGoogle(GoogleTokenExchangeResponse accessToken) {
-    logger.info("exchanging google identity token");
-    // refresh tokens?
-    return webClient.post()
-             .uri("/auth/realms/kooriim-fe/protocol/openid-connect/token")
-             .header("Content-Type", MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-             .body(BodyInserters
-                     .fromFormData("client_id", "kooriim-fe")
-                     .with("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
-                     .with("requested_token_type", "urn:ietf:params:oauth:token-type:refresh_token")
-                     .with("subject_token", accessToken.getAccessToken())
-                     .with("subject_token_type", "urn:ietf:params:oauth:token-type:access_token")
-                     .with("subject_issuer", "google")
-                     .with("requested_issuer", "google"))
-//             .accept(MediaType.APPLICATION_JSON)
-             .retrieve()
-             .bodyToMono(GoogleTokenExchangeResponse.class)
-             .doOnError(error -> logger.error("Error getting tokenExchangeGoogle {}", error))
-             .doOnNext(token -> logger.info("Got tokenExchangeGoogle exchange from google {}", token));
-  }
+//  public Mono<GoogleTokenResponse> tokenExchangeGoogle(GoogleTokenResponse accessToken) {
+//    logger.info("exchanging google identity token");
+//    // refresh tokens?
+//    return webClient.post()
+//             .uri("/auth/realms/kooriim-fe/protocol/openid-connect/token")
+//             .header("Content-Type", MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+//             .body(BodyInserters
+//                     .fromFormData("client_id", "kooriim-fe")
+//                     .with("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
+//                     .with("requested_token_type", "urn:ietf:params:oauth:token-type:refresh_token")
+//                     .with("subject_token", accessToken.getAccessToken())
+//                     .with("subject_token_type", "urn:ietf:params:oauth:token-type:access_token")
+//                     .with("subject_issuer", "google")
+//                     .with("requested_issuer", "google"))
+////             .accept(MediaType.APPLICATION_JSON)
+//             .retrieve()
+//             .bodyToMono(GoogleTokenResponse.class)
+//             .doOnError(error -> logger.error("Error getting tokenExchangeGoogle {}", error))
+//             .doOnNext(token -> logger.info("Got tokenExchangeGoogle exchange from google {}", token));
+//  }
 
-  public Mono<GoogleTokenExchangeResponse> refreshExchangeGoogle(GoogleTokenExchangeResponse accessToken) {
-    logger.info("exchanging google identity token");
-    // refresh tokens?
+  public Mono<GoogleTokenResponse> refreshExchangeGoogle(GoogleTokenResponse accessToken) {
+    logger.info("exchanging google refresh token for new accesstoken");
     return googleClient.post()
              .uri("/token", uriBuilder ->
                               uriBuilder.queryParam("client_id", googleClientId)
@@ -145,52 +136,40 @@ public class GoogleService {
                                 .build())
              .header("Content-Type", MediaType.APPLICATION_JSON_VALUE)
              .retrieve()
-             .bodyToMono(GoogleTokenExchangeResponse.class)
-             .doOnError(error -> logger.error("Error getting refreshExchangeGoogle {}", error))
-             .doOnNext(token -> logger.info("Got refreshExchangeGoogle exchange from google {}", token));
+             .bodyToMono(GoogleTokenResponse.class)
+             .doOnError(error -> logger.error("Error refreshExchangeGoogle {}", error))
+             .doOnNext(token -> logger.info("Got new access token from google {}", token));
   }
 
-  private Mono<Map<String, Object>> initializeS3PhotosLibraryClient(GoogleTokenExchangeResponse googleTokenExchangeResponse) {
+  private Mono<Map<String, Object>> init(GoogleTokenResponse googleTokenResponse, Jwt accessToken) {
     return Mono.fromCallable(() -> {
-      logger.info("initializing photos library client");
-      // use regular accesstoken here and let it expire and then refresh for new url
-//      var cred = UserCredentials.newBuilder()
-//                   .setClientId(googleClientId)
-//                   .setClientSecret(googleSecret)
-//                   .setRefreshToken(googleTokenExchangeResponse.getAccessToken())
-////                   .setTokenServerUri(URI.create(jwkSetUri))
-////                   .setHttpTransportFactory(new DefaultHttpTransportFactory())
-//                   .build();
-//      cred.refresh();
-//      ;
-
       final var settings = PhotosLibrarySettings
                              .newBuilder()
                              .setCredentialsProvider(FixedCredentialsProvider
-                                                       .create(UserCredentials.create(new AccessToken(googleTokenExchangeResponse.getAccessToken(),
-                                                         Date.from(Instant.now().plusSeconds(Long.valueOf(googleTokenExchangeResponse.getExpiresIn())))))))
+                                                       .create(UserCredentials.create(new AccessToken(googleTokenResponse.getAccessToken(),
+                                                         Date.from(Instant.now().plusSeconds(Long.valueOf(googleTokenResponse.getExpiresIn())))))))
                              .build();
       final var client = PhotosLibraryClient.initialize(settings);
-      return Map.of("client", client, "googleTokenExchangeResponse", googleTokenExchangeResponse);
+      return Map.of("jwt", accessToken, "client", client, "googleTokenResponse", googleTokenResponse);
     }).doOnError(e -> logger.error("error initializing photo client {}", e))
              .doOnNext(x -> logger.info("successfully initialized photos library client"));
   }
 
   // TODO sync by date range?
-  private Flux<MediaItemWithIdentityToken> getGooglePhotos(Map<String, Object> map) {
+  private Flux<MediaItemWithGoogleToken> getGooglePhotos(Map<String, Object> map) {
     return Flux.defer(() -> {
       logger.info("getting google photos.. may take awhile");
       var photosLibraryClient = (PhotosLibraryClient) map.get("client");
-      var identityToken = (GoogleTokenExchangeResponse) map.get("googleTokenExchangeResponse");
+      var identityToken = (GoogleTokenResponse) map.get("googleTokenResponse");
+      var jwt = (Jwt) map.get("jwt");
       final var listMediaItemsPagedResponse = photosLibraryClient.listMediaItems(ListMediaItemsRequest
                                                                                    .newBuilder()
                                                                                    .setPageSize(100)
                                                                                    .build());
-      logger.info("response {}", listMediaItemsPagedResponse);
-      final var list = new ArrayList<MediaItemWithIdentityToken>();
+      final var list = new ArrayList<MediaItemWithGoogleToken>();
       listMediaItemsPagedResponse.getPage()
         .getValues()
-        .forEach(mediaItem -> list.add(new MediaItemWithIdentityToken(mediaItem, identityToken, photosLibraryClient)));
+        .forEach(mediaItem -> list.add(new MediaItemWithGoogleToken(mediaItem, identityToken)));
 
       var nextPageToken = listMediaItemsPagedResponse.getNextPageToken();
       var nextPage = listMediaItemsPagedResponse.getPage().getNextPage();
@@ -198,24 +177,44 @@ public class GoogleService {
       while (StringUtils.isNotEmpty(nextPageToken)) {
         logger.info("getting next page");
         nextPage.getValues()
-          .forEach(mediaItem -> list.add(new MediaItemWithIdentityToken(mediaItem, identityToken, photosLibraryClient)));
+          .forEach(mediaItem -> list.add(new MediaItemWithGoogleToken(mediaItem, identityToken)));
         nextPageToken = nextPage.getNextPageToken();
         nextPage = nextPage.getNextPage();
         index++;
         // store index  or date of last itemand try later
       }
-      logger.info("returning google list size {}", list.size());
-      return Flux.fromIterable(list);
+      logger.info("total mediaItems in google {}", list.size());
+      photosLibraryClient.close();
+      return Flux.fromIterable(list)
+               .flatMap(mediaItemDupeCheck(jwt))
+               .filter(mediaItemWithGoogleToken -> mediaItemWithGoogleToken != null)
+               .collectList()
+               .doOnNext(mediaItemWithGoogleToken -> logger.info("{} new mediaItems", mediaItemWithGoogleToken.size()))
+               .flatMapIterable(mediaItemWithGoogleToken -> mediaItemWithGoogleToken);
     }).doOnError((e) -> logger.error("error getting google photos {}", e.getMessage()))
-//             .doOnNext(x -> logger.info("finished getting photos from google"))
              .subscribeOn(Schedulers.elastic());
   }
 
-  private Flux<MediaItemWithIdentityToken> getGooglePhotosByDate(Map<String, Object> map) {
+  private Function<MediaItemWithGoogleToken, Publisher<? extends MediaItemWithGoogleToken>> mediaItemDupeCheck(Jwt jwt) {
+    return mediaItemWithGoogleToken ->
+             mediaItemRepository.mediaItemExists(jwt.getClaimAsString("sub"), mediaItemWithGoogleToken
+                                                                                .getMediaItem()
+                                                                                .getFilename())
+               .flatMap(exists -> {
+                 if (exists.getId() != null) {
+                   logger.info("dupe found {}", exists.getTitle());
+                   return Mono.empty();
+                 }
+                 return Mono.just(mediaItemWithGoogleToken);
+               }).doOnError(err -> logger.error("error doing dupe check {}", err.getMessage()))
+      ;
+  }
+
+  private Flux<MediaItemWithGoogleToken> getGooglePhotosByDate(Map<String, Object> map) {
     return Flux.defer(() -> {
       logger.info("getting google photos.. may take awhile");
       var photosLibraryClient = (PhotosLibraryClient) map.get("client");
-      var identityToken = (GoogleTokenExchangeResponse) map.get("googleTokenExchangeResponse");
+      var identityToken = (GoogleTokenResponse) map.get("googleTokenExchangeResponse");
 // Create a new com.google.type.Date object using a builder
 // Note that there are different valid combinations as described above
       var dayFebruary15 = com.google.type.Date.newBuilder()
@@ -258,10 +257,10 @@ public class GoogleService {
                                                                                    .setPageSize(100)
                                                                                    .build());
       logger.info("response {}", listMediaItemsPagedResponse);
-      final var list = new ArrayList<MediaItemWithIdentityToken>();
+      final var list = new ArrayList<MediaItemWithGoogleToken>();
       listMediaItemsPagedResponse.getPage()
         .getValues()
-        .forEach(mediaItem -> list.add(new MediaItemWithIdentityToken(mediaItem, identityToken, photosLibraryClient)));
+        .forEach(mediaItem -> list.add(new MediaItemWithGoogleToken(mediaItem, identityToken)));
 
       var nextPageToken = listMediaItemsPagedResponse.getNextPageToken();
       var nextPage = listMediaItemsPagedResponse.getPage().getNextPage();
@@ -269,7 +268,7 @@ public class GoogleService {
       while (StringUtils.isNotEmpty(nextPageToken)) {
         logger.info("getting next page");
         nextPage.getValues()
-          .forEach(mediaItem -> list.add(new MediaItemWithIdentityToken(mediaItem, identityToken, photosLibraryClient)));
+          .forEach(mediaItem -> list.add(new MediaItemWithGoogleToken(mediaItem, identityToken)));
         nextPageToken = nextPage.getNextPageToken();
         nextPage = nextPage.getNextPage();
         index++;
@@ -283,77 +282,52 @@ public class GoogleService {
   }
 
 
-  private Mono<MediaItem> downloadGoogleMediaItem(Jwt accessToken, MediaItemWithIdentityToken mediaItemWithIdentityToken) {
-//    logger.info("checking if media item already exists{}", mediaItem.getFilename());
-//    return mediaItemService.getUserGoogleId()
-//             .flatMap(googleId ->
-    ;
-    var mediaItem = mediaItemWithIdentityToken.getMediaItem();
-    return mediaItemRepository.mediaItemExists(accessToken.getClaimAsString("sub"), mediaItem.getFilename())
-             .flatMap(exists -> {
-               if (exists.getId() == null) {
-                 var contentType = getContentType(mediaItem.getMimeType());
-                 var mediaType = mediaItemService.getMediaType(mediaItem.getMimeType());
-//                                        if (mediaType.equalsIgnoreCase("photo")) return Mono.empty();
-                 final var googleTempDir = new File("/tmp/google_photos");
-                 if (!googleTempDir.exists()) {
-                   googleTempDir.mkdirs();
-                 }
-                 if (mediaType.equalsIgnoreCase("photo")) {
-                   return downloadImage(mediaItemWithIdentityToken, contentType);
-                 } else {
-//                                          logger.info("medaItem does not exist, downloading {}", mediaItem.getFilename());
-                   return downloadVideo(mediaItem);
-                 }
-               }
-               return Mono.empty();
-//                                      logger.info("SKIPPING DUPLICATE MEDIAITEM {}", mediaItem.getFilename());
-//                                      throw new ConflictException("skipping google mediaItem because duplicate exists " + mediaItem.getFilename());
-             });
-
-
+  private Mono<MediaItem> downloadGoogleMediaItem(Jwt accessToken, MediaItemWithGoogleToken mediaItemWithGoogleToken) {
+    var mediaItem = mediaItemWithGoogleToken.getMediaItem();
+    var contentType = getContentType(mediaItem.getMimeType());
+    var mediaType = mediaItemService.getMediaType(mediaItem.getMimeType());
+    final var googleTempDir = new File("/tmp/google_photos");
+    if (!googleTempDir.exists()) {
+      googleTempDir.mkdirs();
+    }
+    if (mediaType.equalsIgnoreCase("photo")) {
+      return downloadImage(mediaItemWithGoogleToken, contentType);
+    } else {
+      return downloadVideo(mediaItem);
+    }
   }
 
-  private Mono<MediaItem> downloadImage(MediaItemWithIdentityToken mediaItemWithIdentityToken, String contentType) {
-    logger.info("Downloading image {}", mediaItemWithIdentityToken.getMediaItem().getFilename());
-    var mediaItem = mediaItemWithIdentityToken.getMediaItem();
-    return getMediaItem(mediaItem, contentType)
+  private Mono<MediaItem> downloadImage(MediaItemWithGoogleToken mediaItemWithGoogleToken, String contentType) {
+    logger.info("Downloading image {}", mediaItemWithGoogleToken.getMediaItem().getFilename());
+    var mediaItem = mediaItemWithGoogleToken.getMediaItem();
+    return getMediaItemImage(mediaItem, contentType)
              .onErrorResume(error -> {
-               logger.error("ON ERROR RESUME");
-               logger.error("ERROR IS OF UNAUTHENTICATED TYPE {}", error.getMessage());
-               var identityToken = mediaItemWithIdentityToken.getGoogleTokenExchangeResponse();
-               logger.info("got identity token {}", identityToken.getAccessToken());
-               return refreshExchangeGoogle(identityToken)
-                        .flatMap(x -> {
+               logger.error("download retrying because {}", error.getMessage());
+               var googleTokenResponse = mediaItemWithGoogleToken.getGoogleTokenResponse();
+               return refreshExchangeGoogle(googleTokenResponse)
+                        .flatMap(newAccessToken -> {
                           try {
-                            logger.info("refreshing token {}", identityToken);
-
-//                            var photoClient = (PhotosLibraryClient)x.get("client");
+                            logger.info("refreshing googleTokenResponse {}", googleTokenResponse);
                             final var settings = PhotosLibrarySettings
                                                    .newBuilder()
                                                    .setCredentialsProvider(FixedCredentialsProvider
-                                                                             .create(UserCredentials.create(new AccessToken(x.getAccessToken(),
-                                                                               Date.from(Instant.now().plusSeconds(Long.valueOf(x.getExpiresIn())))))))
+                                                                             .create(UserCredentials.create(new AccessToken(newAccessToken.getAccessToken(),
+                                                                               Date.from(Instant.now().plusSeconds(Long.valueOf(newAccessToken.getExpiresIn())))))))
                                                    .build();
                             var photoClient = PhotosLibraryClient.initialize(settings);
                             var result = photoClient.getMediaItem(mediaItem.getId());
-//                            photoClient.close();
-                            return getMediaItem(result, contentType);
+                            photoClient.close();
+                            return getMediaItemImage(result, contentType);
                           } catch (Exception e) {
-                            e.printStackTrace();
-                            logger.error("failed refetch item {} {}", mediaItem.getFilename(), error);
+                            logger.error("failed to retry downloading image {} {}", mediaItem.getFilename(), error);
                           }
                           return Mono.empty();
                         });
-//               logger.info("GOT IDENTITY TOKEN {}", identityToken.getAccessToken());
-//               return Mono.empty();
              })
-             .doOnError(error -> logger.error("error downloading image from google {} {}", mediaItem.getFilename(), error))
-             .retryBackoff(20, Duration.ofMinutes(1))
-             .doOnNext(x -> logger.info("downloaded image from google {}", mediaItem.getFilename()));
+             .retryBackoff(20, Duration.ofMinutes(1));
   }
 
-  private Mono<MediaItem> getMediaItem(MediaItem mediaItem, String contentType) {
+  private Mono<MediaItem> getMediaItemImage(MediaItem mediaItem, String contentType) {
     return Mono.fromCallable(() -> {
       var width = mediaItem.getMediaMetadata().getWidth();
       var height = mediaItem.getMediaMetadata().getHeight();
@@ -363,8 +337,7 @@ public class GoogleService {
       ImageIO.write(image, contentType, outputfile);
       image = null;
       return mediaItem;
-    })//.doOnError(error -> logger.error("error downloading image from google {} {}", mediaItem.getFilename(), error))
-             //     .retryBackoff(20, Duration.ofMinutes(1))
+    }).doOnError(error -> logger.error("error downloading image from google {} {}", mediaItem.getFilename(), error))
              .doOnNext(x -> logger.info("downloaded image from google {}", mediaItem.getFilename()));
   }
 
@@ -384,9 +357,6 @@ public class GoogleService {
   }
 
   private Mono<com.kooriim.pas.domain.MediaItem> uploadMediaItem(Jwt accessToken, MediaItem mediaItem) {
-    if (mediaItem.getId() == null) {
-      return Mono.empty();
-    }
     return mediaItemService.processGoogleMediaItem(accessToken, mediaItem)
              .flatMap(mediaItemService::saveMediaItem)
              .doOnError(error -> logger.error("error saving mediaItem {} {}", mediaItem.getFilename(), error.getMessage()))
@@ -414,33 +384,34 @@ public class GoogleService {
     return "jpg";
   }
 
-  public Mono<String> getUserAccessToken() {
-    return ReactiveSecurityContextHolder
-             .getContext()
-             .doOnError(error -> logger.error("error authorizing user context {}", error))
-             .publishOn(Schedulers.boundedElastic())
-             .map(SecurityContext::getAuthentication)
-             .cast(JwtAuthenticationToken.class)
-             .map(JwtAuthenticationToken::getToken)
-             .map(Jwt::getTokenValue)
-             .doOnNext(x -> logger.info("Got User AccessToken"));
-  }
-
-  class DefaultHttpTransportFactory implements HttpTransportFactory {
-    final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
-
-    public HttpTransport create() {
-      return HTTP_TRANSPORT;
-    }
-  }
-
-  private boolean shouldRefresh(GoogleTokenExchangeResponse googleTokenExchangeResponse) {
-    Long expiresIn = getExpiresInMilliseconds(googleTokenExchangeResponse);
-    return expiresIn <= 60000L * 5L;
-  }
-
-  private Long getExpiresInMilliseconds(GoogleTokenExchangeResponse googleTokenExchangeResponse) {
-    var date = Date.from(Instant.now().plusSeconds(Long.valueOf(googleTokenExchangeResponse.getExpiresIn())));
-    return (date.getTime() - Clock.SYSTEM.currentTimeMillis());
-  }
+//  public Mono<String> getUserAccessToken() {
+//    return ReactiveSecurityContextHolder
+//             .getContext()
+//             .doOnError(error -> logger.error("error authorizing user context {}", error))
+//             .publishOn(Schedulers.boundedElastic())
+//             .map(SecurityContext::getAuthentication)
+//             .cast(JwtAuthenticationToken.class)
+//             .map(JwtAuthenticationToken::getToken)
+//             .map(Jwt::getTokenValue)
+//             .doOnNext(x -> logger.info("Got User AccessToken"));
+//  }
+//
+//  class DefaultHttpTransportFactory implements HttpTransportFactory {
+//    final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
+//
+//    public HttpTransport create() {
+//      return HTTP_TRANSPORT;
+//    }
+//
+//  }
+//
+//  private boolean shouldRefresh(GoogleTokenResponse googleTokenResponse) {
+//    Long expiresIn = getExpiresInMilliseconds(googleTokenResponse);
+//    return expiresIn <= 60000L * 5L;
+//  }
+//
+//  private Long getExpiresInMilliseconds(GoogleTokenResponse googleTokenResponse) {
+//    var date = Date.from(Instant.now().plusSeconds(Long.valueOf(googleTokenResponse.getExpiresIn())));
+//    return (date.getTime() - Clock.SYSTEM.currentTimeMillis());
+//  }
 }

@@ -23,13 +23,17 @@ public class MediaItem implements Serializable {
   private Integer id;
   @Transient
   private MediaItemMetaData mediaItemMetaData;
-  @Size(max = 50)
+  @Size(max = 255)
   private String title;
+  @Size(max = 255)
   private String compressedImageFilePath;
+  @Size(max = 255)
   private String originalImageFilePath;
+  @Size(max = 255)
   private String thumbnailFilePath;
+  @Size(max = 255)
   private String videoFilePath;
-  @Size(max = 50)
+  @Size(max = 255)
   private String description;
   @Transient
   private String base64CompressedImage;

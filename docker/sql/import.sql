@@ -16,14 +16,14 @@ CREATE TABLE  users (
 DROP TABLE IF EXISTS media_item;
 CREATE TABLE  media_item (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     original_image_file_path VARCHAR(255),
     compressed_image_file_path VARCHAR(255),
     thumbnail_file_path VARCHAR(255),
     video_file_path VARCHAR(255),
     content_type VARCHAR(10) NOT NULL,
     media_type VARCHAR(10) NOT NULL,
-    description VARCHAR(50) DEFAULT NULL,
+    description VARCHAR(255) DEFAULT NULL,
     google_id VARCHAR(255) NOT NULL,
     is_public TINYINT(1) DEFAULT 0,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
