@@ -4,11 +4,12 @@ import com.google.photos.types.proto.MediaItem;
 
 public class MediaItemWithGoogleToken {
   private com.google.photos.types.proto.MediaItem mediaItem;
-  private GoogleTokenResponse googleTokenResponse;
+  private String refreshToken;
 
-  public MediaItemWithGoogleToken(MediaItem mediaItem, GoogleTokenResponse googleTokenResponse) {
+  public MediaItemWithGoogleToken(){}
+  public MediaItemWithGoogleToken(MediaItem mediaItem, String refreshToken) {
     this.mediaItem = mediaItem;
-    this.googleTokenResponse = googleTokenResponse;
+    this.refreshToken = refreshToken;
   }
 
   public MediaItem getMediaItem() {
@@ -19,11 +20,11 @@ public class MediaItemWithGoogleToken {
     this.mediaItem = mediaItem;
   }
 
-  public GoogleTokenResponse getGoogleTokenResponse() {
-    return googleTokenResponse;
+  public String getRefreshToken() {
+    return refreshToken;
   }
 
-  public void setGoogleTokenResponse(GoogleTokenResponse googleTokenResponse) {
-    this.googleTokenResponse = googleTokenResponse;
+  public void setRefreshToken(String refreshToken) {
+    this.refreshToken = refreshToken;
   }
 }

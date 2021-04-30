@@ -66,7 +66,7 @@ public class MediaItemService {
   public Mono<MediaItem> getMediaItemById(Integer mediaItemId, Map<String, String> params) {
     return mediaItemRepository.getMediaItemById(mediaItemId)
              .flatMap(mediaItem -> setBase64Photo(params, mediaItem))
-             .doOnNext(this::setMetaData);
+             .flatMap(this::setMetaData);
   }
 
 //  public Mono<byte[]> getVideoByTitle(String title) {
@@ -214,6 +214,10 @@ public class MediaItemService {
     logger.info("processing google media item {}", mediaItem.getFilename());
     final var contentType = getContentType(mediaItem.getFilename().toLowerCase());
     final var mediaType = getMediaType(mediaItem.getMimeType());
+    if (contentType.equalsIgnoreCase("gif")) {
+      logger.warn("skipping gif 2 {}", mediaItem.getFilename());
+      return Mono.empty();
+    }
     if (mediaType.equalsIgnoreCase("photo")) {
       return pushCompressedGooglePhotoToS3(mediaItem, accessToken.getClaimAsString("sub"), file, mediaType, contentType);
     } else {
@@ -254,11 +258,12 @@ public class MediaItemService {
 
   private Mono<MediaItem> setMetaData(MediaItem mediaItem) {
     return mediaItemMetaDataRepository.findByMediaItemId(mediaItem.getId())
-             .map(metaData -> {
+             .flatMap(metaData -> {
                mediaItem.setMediaItemMetaData(metaData);
-               return mediaItem;
+               return Mono.just(mediaItem);
              }).doOnError(error -> logger.error("error finding metadata for mediaItem {} {}", mediaItem.getTitle(), error.getMessage()))
-             .doOnNext(x -> logger.info("got metaData for mediaItem {}", mediaItem.getTitle()));
+             .doOnNext(x -> logger.info("got metaData for mediaItem {}", mediaItem.getTitle()))
+             .switchIfEmpty(Mono.just(mediaItem));
   }
 
 
@@ -287,29 +292,37 @@ public class MediaItemService {
       final var filePath = imgDir + "/" + file.filename();
       final var tempFile = new File(filePath);
       file.transferTo(tempFile);
+
       final var thumbnailPath = ThumbnailGenerator.randomGrabberFFmpegImage(filePath, 2);
       final var tempThumbnailFile = new File(thumbnailPath);
+      final byte[] compressedThumbnailResult = compressPhoto("png", ImageIO.read(tempThumbnailFile), 360f, 270f);
+
       var thumbnailKey = thumbnailPath.substring(thumbnailPath.lastIndexOf("/") + 1);
       thumbnailKey = thumbnailKey.substring(0, thumbnailKey.lastIndexOf(".")) + ".thumbnail.png";
 
-      logger.info("pushing thumbnail to s3 {}", file.filename());
+      final var thumbnailSize = compressedThumbnailResult.length / 1024;//kb
+      final var videoSize = Long.valueOf(tempFile.length()).intValue() / 1024;//kb
+
+      logger.info("pushing video to s3 {}", file.filename());
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
                               .key(file.filename())
                               .build(), AsyncRequestBody.fromFile(tempFile)).whenComplete((response, err) -> tempFile.delete());
-      logger.info("pushing video to s3 {}", file.filename());
+      logger.info("pushing thumbnail to s3 {}", file.filename());
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
                               .key("thumbnail." + thumbnailKey)
-                              .build(), AsyncRequestBody.fromFile(tempThumbnailFile)).whenComplete((response, err) -> tempThumbnailFile.delete());
+                              .build(), AsyncRequestBody.fromBytes(compressedThumbnailResult)).whenComplete((response, err) -> tempThumbnailFile.delete());
       return MediaItem.newInstanceVideo(file.filename(),
         S3_BUCKET_BASE_URL + thumbnailKey,
         S3_BUCKET_BASE_URL + file.filename(),
         contentType,
         googleId,
         "video",
+        thumbnailSize,
+        videoSize,
         null);
     }).doOnError(error -> logger.error("error creating  video {} {}", file.filename(), error.getMessage()))
              .doOnNext(x -> logger.info("successfully created  video {}", file.filename()));
@@ -322,8 +335,14 @@ public class MediaItemService {
       final var tempFile = new File(filePath);
       final var thumbnailPath = ThumbnailGenerator.randomGrabberFFmpegImage(filePath, 2);
       final var tempThumbnailFile = new File(thumbnailPath);
+
       var thumbnailKey = "thumbnail." + thumbnailPath.substring(thumbnailPath.lastIndexOf("/") + 1);
-//      thumbnailKey = thumbnailKey.substring(0, thumbnailKey.lastIndexOf(".")) + ".png";
+
+      byte[] compressedThumbnailResult = compressPhoto("png", ImageIO.read(tempThumbnailFile), 360f, 270f);
+
+      final var thumbnailSize = compressedThumbnailResult.length / 1024;//kb
+      final var videoSize = Long.valueOf(tempFile.length()).intValue() / 1024;//kb
+
       logger.info("pushing google video to s3 {}", fileName);
       awsS3Client.putObject(PutObjectRequest
                               .builder()
@@ -336,13 +355,15 @@ public class MediaItemService {
                               .builder()
                               .bucket(S3_BUCKET_NAME)
                               .key(thumbnailKey) // check key hnanme
-                              .build(), AsyncRequestBody.fromFile(tempThumbnailFile)).whenComplete((response, err) -> tempThumbnailFile.delete());
+                              .build(), AsyncRequestBody.fromBytes(compressedThumbnailResult)).whenComplete((response, err) -> tempThumbnailFile.delete());
       return MediaItem.newInstanceVideo(fileName,
         S3_BUCKET_BASE_URL + thumbnailKey,
         S3_BUCKET_BASE_URL + fileName,
         contentType,
         googleId,
         "video",
+        thumbnailSize,
+        videoSize,
         mediaItem);
     }).doOnError(error -> logger.error("error creating google video {} {}", fileName, error.getMessage()))
              .retryBackoff(20, Duration.ofMinutes(1))
@@ -360,6 +381,9 @@ public class MediaItemService {
       final var thumbnailKey = "thumbnail." + fileName;
       final var compressedKey = "compressed." + fileName;
       final var originalKey = "original." + fileName;
+      final var compressedSize = compressedImageResult.length / 1024;//kb
+      final var thumbnailSize = compressedThumbnailResult.length / 1024;//kb
+      final var originalSize = Long.valueOf(tempFile.length()).intValue() / 1024;//kb
       logger.info("pushing compressed  photo to s3");
       awsS3Client.putObject(PutObjectRequest
                               .builder()
@@ -387,6 +411,9 @@ public class MediaItemService {
         contentType,
         name,
         mediaType,
+        thumbnailSize,
+        compressedSize,
+        originalSize,
         null);
 
     }).doOnError(error -> logger.error("error creating photo {} {}", file.filename(), error.getMessage()))
@@ -402,6 +429,9 @@ public class MediaItemService {
       final var thumbnailKey = "thumbnail." + fileName;
       final var compressedKey = "compressed." + fileName;
       final var originalKey = "original." + fileName;
+      final var compressedSize = compressedImageResult.length / 1024;//kb
+      final var thumbnailSize = compressedThumbnailResult.length / 1024;//kb
+      final var originalSize = Long.valueOf(file.length()).intValue() / 1024;//kb
       logger.info("pushing compressed google photo to s3 {}", fileName);
       awsS3Client.putObject(PutObjectRequest
                               .builder()
@@ -435,6 +465,9 @@ public class MediaItemService {
         contentType,
         googleId,
         mediaType,
+        thumbnailSize,
+        compressedSize,
+        originalSize,
         mediaItem);
 
     })
@@ -462,7 +495,7 @@ public class MediaItemService {
     final var param = writer.getDefaultWriteParam();
 
     param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-    param.setCompressionQuality(0.6f);  // Change the quality value you prefer
+    param.setCompressionQuality(0.75f);  // Change the quality value you prefer
     writer.write(null, new IIOImage(image, null, null), param);
     final var compressedImageResult = byteOutputStream.toByteArray();
     writer.dispose();
@@ -510,6 +543,8 @@ public class MediaItemService {
       return "3pg";
     } else if (fileName.toLowerCase().endsWith("mkv")) {
       return "mkv";
+    } else if (fileName.toLowerCase().endsWith("gif")) {
+      return "gif";
     }
     return "jpg";
   }

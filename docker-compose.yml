@@ -61,6 +61,7 @@ services:
       - auth-network
   keycloak:
     image: jboss/keycloak
+    restart: always
     logging:
       driver: "json-file"
       options: 

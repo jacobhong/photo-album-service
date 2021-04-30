@@ -49,7 +49,7 @@ public class MediaItemRepository {
 
   public Flux<MediaItem> getMediaItemsByGoogleId(String googleId, Pageable pageable) {
     return Flux.defer(() -> Flux.fromIterable(entityManager
-                                                .createNativeQuery("SELECT * FROM media_item WHERE google_id=:google_id order by created desc", MediaItem.class)
+                                                .createNativeQuery("SELECT * FROM media_item WHERE google_id=:google_id order by original_date desc", MediaItem.class)
                                                 .setParameter("google_id", googleId)
                                                 .setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
                                                 .setMaxResults(pageable.getPageSize()).getResultList()))

@@ -26,7 +26,6 @@ public class MediaItemMetaData {
   private String cameraModel;
   private int isoEquivalent;
   private long exposureTime;
-  private Date creationTime;
   private long width;
   private long height;
   private double fps;
@@ -45,7 +44,6 @@ public class MediaItemMetaData {
     if (mediaMetadata.getVideo() != null) {
       fps = mediaMetadata.getVideo().getFps();
     }
-    creationTime = Date.from(Instant.ofEpochSecond(mediaMetadata.getCreationTime().getSeconds()));
     width = mediaMetadata.getWidth();
     height = mediaMetadata.getHeight();
   }
@@ -120,14 +118,6 @@ public class MediaItemMetaData {
 
   public void setExposureTime(long exposureTime) {
     this.exposureTime = exposureTime;
-  }
-
-  public Date getCreationTime() {
-    return creationTime;
-  }
-
-  public void setCreationTime(Date creationTime) {
-    this.creationTime = creationTime;
   }
 
   public long getWidth() {

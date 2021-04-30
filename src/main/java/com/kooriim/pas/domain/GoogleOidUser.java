@@ -15,13 +15,16 @@ public class GoogleOidUser implements Serializable {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Integer id;
 
-  @Column(name ="google_id")
   private String googleId;
 
   @Column
   private String name;
+
   @Column
   private String email;
+
+  @Column
+  private String refreshToken;
 
   public Integer getId() {
     return id;
@@ -53,6 +56,14 @@ public class GoogleOidUser implements Serializable {
 
   public void setGoogleId(String googleId) {
     this.googleId = googleId;
+  }
+
+  public String getRefreshToken() {
+    return refreshToken;
+  }
+
+  public void setRefreshToken(String refreshToken) {
+    this.refreshToken = refreshToken;
   }
 
   @Override

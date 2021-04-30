@@ -1,16 +1,14 @@
 package com.kooriim.pas.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import org.hibernate.Metamodel;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.SelectBeforeUpdate;
-import org.springframework.http.codec.multipart.FilePart;
 
 import javax.persistence.*;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
+import java.time.Instant;
 import java.util.Date;
-import java.util.Objects;
 
 @Entity
 @Table(name = "media_item")
@@ -35,6 +33,10 @@ public class MediaItem implements Serializable {
   private String videoFilePath;
   @Size(max = 255)
   private String description;
+  private Integer compressedImageFileSize;
+  private Integer thumbnailImageFileSize;
+  private Integer originalImageFileSize;
+  private Integer videoFileSize;
   @Transient
   private String base64CompressedImage;
   @Transient
@@ -46,6 +48,7 @@ public class MediaItem implements Serializable {
   private String mediaType;
   @Column(name = "is_public", nullable = false, columnDefinition = "BIT", length = 1)
   private Boolean isPublic;
+  private Date originalDate;
   private Date created;
   private Date updated;
 
@@ -185,7 +188,52 @@ public class MediaItem implements Serializable {
     this.updated = updated;
   }
 
-  public static MediaItem newInstancePhoto(String fileName, String compressedImageFilePath, String originalImageFilePath, String thumbnailFilePath, String contentType, String googleId, String mediaType, com.google.photos.types.proto.MediaItem mediaItem) {
+  public Date getOriginalDate() {
+    return originalDate;
+  }
+
+  public void setOriginalDate(Date originalDate) {
+    this.originalDate = originalDate;
+  }
+
+  public Integer getCompressedImageFileSize() {
+    return compressedImageFileSize;
+  }
+
+  public void setCompressedImageFileSize(Integer compressedImageFileSize) {
+    this.compressedImageFileSize = compressedImageFileSize;
+  }
+
+  public Integer getThumbnailImageFileSize() {
+    return thumbnailImageFileSize;
+  }
+
+  public void setThumbnailImageFileSize(Integer thumbnailImageFileSize) {
+    this.thumbnailImageFileSize = thumbnailImageFileSize;
+  }
+
+  public Integer getOriginalImageFileSize() {
+    return originalImageFileSize;
+  }
+
+  public void setOriginalImageFileSize(Integer originalImageFileSize) {
+    this.originalImageFileSize = originalImageFileSize;
+  }
+
+  public Integer getVideoFileSize() {
+    return videoFileSize;
+  }
+
+  public void setVideoFileSize(Integer videoFileSize) {
+    this.videoFileSize = videoFileSize;
+  }
+
+  // TODO add builder pattern
+  public static MediaItem newInstancePhoto(String fileName, String compressedImageFilePath,
+                                           String originalImageFilePath, String thumbnailFilePath,
+                                           String contentType, String googleId, String mediaType,
+                                           Integer thumbnailFileSize, Integer compressedFileSize, Integer originalFileSize,
+                                           com.google.photos.types.proto.MediaItem mediaItem) {
     final var photo = new MediaItem();
     photo.setContentType(contentType);
     photo.setCompressedImageFilePath(compressedImageFilePath);
@@ -194,14 +242,21 @@ public class MediaItem implements Serializable {
     photo.setTitle(fileName);
     photo.setGoogleId(googleId);
     photo.setMediaType(mediaType);
+    photo.setThumbnailImageFileSize(thumbnailFileSize);
+    photo.setCompressedImageFileSize(compressedFileSize);
+    photo.setOriginalImageFileSize(originalFileSize);
     if (mediaItem != null && mediaItem.getMediaMetadata() != null) {
       final var mediaItemMetaData = new MediaItemMetaData(mediaItem.getMediaMetadata());
       photo.setMediaItemMetaData(mediaItemMetaData);
+      photo.setOriginalDate(Date.from(Instant.ofEpochSecond(mediaItem.getMediaMetadata().getCreationTime().getSeconds())));
     }
     return photo;
   }
 
-  public static MediaItem newInstanceVideo(String fileName, String thumbnailFilePath, String videoFilePath, String contentType, String googleId, String mediaType, com.google.photos.types.proto.MediaItem mediaItem) {
+  public static MediaItem newInstanceVideo(String fileName, String thumbnailFilePath, String videoFilePath,
+                                           String contentType, String googleId, String mediaType,
+                                           Integer thumbnailFileSize, Integer videoFileSize,
+                                           com.google.photos.types.proto.MediaItem mediaItem) {
     final var video = new MediaItem();
     video.setContentType(contentType);
     video.setThumbnailFilePath(thumbnailFilePath);
@@ -209,9 +264,12 @@ public class MediaItem implements Serializable {
     video.setTitle(fileName);
     video.setGoogleId(googleId);
     video.setMediaType(mediaType);
+    video.thumbnailImageFileSize = thumbnailFileSize;
+    video.videoFileSize = videoFileSize;
     if (mediaItem != null && mediaItem.getMediaMetadata() != null) {
       final var mediaItemMetaData = new MediaItemMetaData(mediaItem.getMediaMetadata());
       video.setMediaItemMetaData(mediaItemMetaData);
+      video.setOriginalDate(Date.from(Instant.ofEpochSecond(mediaItem.getMediaMetadata().getCreationTime().getSeconds())));
     }
     return video;
   }

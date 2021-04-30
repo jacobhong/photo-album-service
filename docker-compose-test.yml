@@ -38,6 +38,7 @@ services:
       - auth-network
   keycloak:
     image: jboss/keycloak
+    restart: always
     environment:
       JAVA_OPTS_APPEND: -Dkeycloak.profile=preview
       KEYCLOAK_USER: keycloak131
