@@ -1,7 +1,5 @@
 server:
   port: ${SERVER_PORT}
-  servlet:
-    contextPath: /photo-album-service
 #  ssl:
 #    enabled: true
 #    key-alias: keycloak

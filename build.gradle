@@ -31,7 +31,7 @@ dependencies {
 	implementation 'org.springframework.security:spring-security-oauth2-jose'
 	implementation 'org.springframework.security:spring-security-oauth2-resource-server'
 	api "org.bytedeco:javacv-platform:1.5.5" // or any other "-platform" artifacts
-	compile 'com.google.photos.library:google-photos-library-client:1.6.0'
+	compile 'com.google.photos.library:google-photos-library-client:1.6.1'
 
 	implementation platform('software.amazon.awssdk:bom:2.16.29')
 	implementation 'software.amazon.awssdk:s3'

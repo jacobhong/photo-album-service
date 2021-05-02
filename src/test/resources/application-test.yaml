@@ -1,7 +1,5 @@
 server:
   port: 8080
-  servlet:
-    contextPath: /photo-album-service
   ssl:
     enabled: false
 spring:
@@ -55,4 +53,4 @@ s3:
 #  level:
 #    reactor:
 #      netty: DEBUG
-baseKeycloakUrl: https://192.168.1.206.xip.io:8443
+baseKeycloakUrl: https://localhost:8443

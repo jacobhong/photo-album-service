@@ -30,8 +30,8 @@ public class MediaItemRepository {
                                      .setParameter("id", id)
                                      .getSingleResult())
              .cast(MediaItem.class)
-             .doOnNext(mediaItem -> logger.info("Got mediaItem {}", mediaItem.getTitle()))
-             .doOnError(error -> logger.error("Error getting photo {}", error.getMessage()))
+             .doOnNext(mediaItem -> logger.debug("Got mediaItem {}", mediaItem.getTitle()))
+             .doOnError(error -> logger.error("Error getting mediaItem {}", error.getMessage()))
              .onErrorResume(e -> Mono.empty())
              .subscribeOn(Schedulers.boundedElastic());
   }
@@ -76,8 +76,7 @@ public class MediaItemRepository {
                                      .setParameter("title", filename)
                                      .getSingleResult())
              .cast(MediaItem.class)
-             .doOnNext(mediaItem -> logger.info("Check if mediaItem exists {} {}", filename, mediaItem))
-//             .doOnError(error -> logger.error("Error Check if mediaItem exists {} {}", filename, error.getMessage()))
+             .doOnNext(mediaItem -> logger.debug("Check if mediaItem exists {} {}", filename, mediaItem))
              .onErrorResume(e -> Mono.just(new MediaItem()))
              .subscribeOn(Schedulers.boundedElastic());
   }

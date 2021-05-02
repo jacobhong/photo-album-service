@@ -48,7 +48,7 @@
 //  }
 //
 //  @RequestMapping(value = "/{id}", method = RequestMethod.DELETE)
-//  public ResponseEntity<Void> deletePhoto(@PathVariable Integer id) {
+//  public ResponseEntity<Void> deleteMediaItem(@PathVariable Integer id) {
 //    logger.info("deleting photo id: {}", id);
 //    photoService.deleteMediaItems(new ArrayList<>() {{
 //      add(id);
@@ -57,16 +57,16 @@
 //  }
 //
 //  @RequestMapping(value = "", method = RequestMethod.DELETE)
-//  public ResponseEntity<Void> deletePhoto(@RequestParam("photoIds") List<Integer> ids) {
+//  public ResponseEntity<Void> deleteMediaItem(@RequestParam("photoIds") List<Integer> ids) {
 //    logger.info("deleting photo id: {}", ids);
 //    photoService.deleteMediaItems(ids);
 //    return new ResponseEntity(HttpStatus.OK);
 //  }
 //
 //  @RequestMapping(value = "", method = RequestMethod.PATCH)
-//  public ResponseEntity<Void> patchPhotos(@RequestBody List<MediaItem> photos) {
+//  public ResponseEntity<Void> patchMediaItems(@RequestBody List<MediaItem> photos) {
 //    logger.info("patching photos: {}", photos);
-//    photoService.patchPhotos(photos);
+//    photoService.patchMediaItems(photos);
 //    return new ResponseEntity(HttpStatus.OK);
 //  }
 //

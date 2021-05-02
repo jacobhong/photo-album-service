@@ -7,8 +7,8 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
-import static com.kooriim.pas.routers.PhotoRouter.ACCEPTS_JSON;
-import static com.kooriim.pas.routers.PhotoRouter.CONTENT_TYPE_JSON;
+import static com.kooriim.pas.routers.MediaItemRouter.ACCEPTS_JSON;
+import static com.kooriim.pas.routers.MediaItemRouter.CONTENT_TYPE_JSON;
 import static org.springframework.web.reactive.function.server.RequestPredicates.*;
 import static org.springframework.web.reactive.function.server.RouterFunctions.nest;
 @Configuration

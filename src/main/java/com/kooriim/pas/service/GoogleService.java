@@ -8,10 +8,12 @@ import com.google.photos.library.v1.PhotosLibrarySettings;
 import com.google.photos.library.v1.proto.DateFilter;
 import com.google.photos.library.v1.proto.Filters;
 import com.google.photos.library.v1.proto.ListMediaItemsRequest;
+import com.google.photos.library.v1.proto.SearchMediaItemsRequest;
 import com.google.photos.types.proto.DateRange;
 import com.google.photos.types.proto.MediaItem;
 import com.kooriim.pas.domain.GoogleTokenResponse;
-import com.kooriim.pas.domain.MediaItemWithGoogleToken;
+import com.kooriim.pas.domain.MediaItemWithRefreshToken;
+import com.kooriim.pas.domain.enums.ContentType;
 import com.kooriim.pas.repository.MediaItemRepository;
 import com.kooriim.pas.repository.UserRepository;
 import org.apache.commons.lang3.StringUtils;
@@ -22,13 +24,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.parameters.P;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -44,6 +48,10 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.function.Function;
 
+import static com.kooriim.pas.domain.constant.Constants.S3_BUCKET_BASE_URL;
+import static com.kooriim.pas.util.MediaItemUtil.compressPhoto;
+import static com.kooriim.pas.util.MediaItemUtil.getMediaType;
+
 /**
  * alpha testing
  * TODO add sync by date
@@ -55,22 +63,35 @@ public class GoogleService {
 
   @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
   private String jwkSetUri;
+
   @Value("${google.clientId}")
   private String googleClientId;
+
   @Value("${google.clientSecret}")
   private String googleSecret;
+
+  @Value("${s3.bucketName}")
+  private String S3_BUCKET_NAME;
+
   @Autowired
   private MediaItemService mediaItemService;
+
   @Autowired
   private WebClient webClient;
+
   @Autowired
   @Qualifier("googleClient")
   private WebClient googleClient;
+
   @Autowired
   private MediaItemRepository mediaItemRepository;
 
   @Autowired
   private UserRepository userRepository;
+
+  @Autowired
+  @Qualifier("awsS3Client")
+  private S3AsyncClient awsS3Client;
 
   /**
    * Download all MediaItems from google, upload to s3 and save record to database. Need add delay here
@@ -83,14 +104,13 @@ public class GoogleService {
     return getGoogleAccessToken(jwt)
              .flatMap(googleTokenResponse -> init(user.get().getRefreshToken(), googleTokenResponse, jwt))
              .flatMapMany(this::getGooglePhotos)
-             .delayUntil(d -> Mono.delay(Duration.ofSeconds(2)))
+             .delayUntil(d -> Mono.delay(Duration.ofSeconds(1)))
              .flatMap(mediaItem -> downloadGoogleMediaItem(jwt, mediaItem))
-             .flatMap(mediaItem -> mediaItemService.processGoogleMediaItem(jwt, mediaItem))
+             .flatMap(mediaItem -> processGoogleMediaItem(jwt, mediaItem))
              .flatMap(mediaItemService::saveMediaItem);
   }
 
   public Mono<GoogleTokenResponse> getGoogleAccessToken(Jwt accessToken) {
-    logger.info("getting google identity token");
     return webClient.get()
              .uri("/auth/realms/kooriim-fe/broker/google/token?access_type=offline")
              .accept(MediaType.APPLICATION_JSON)
@@ -135,7 +155,7 @@ public class GoogleService {
              .retrieve()
              .bodyToMono(GoogleTokenResponse.class)
              .doOnError(error -> logger.error("Error refreshExchangeGoogle {}", error))
-             .doOnNext(token -> logger.info("Got new access token from google {}", token));
+             .doOnNext(token -> logger.info("Got new access token from google"));
   }
 
   private Mono<Map<String, Object>> init(String refreshToken, GoogleTokenResponse googleTokenResponse, Jwt jwt) {
@@ -152,8 +172,7 @@ public class GoogleService {
              .doOnNext(x -> logger.info("successfully initialized photos library client"));
   }
 
-  // TODO sync by date range?
-  private Flux<MediaItemWithGoogleToken> getGooglePhotos(Map<String, Object> map) {
+  private Flux<MediaItemWithRefreshToken> getGooglePhotos(Map<String, Object> map) {
     return Flux.defer(() -> {
       logger.info("getting google photos.. may take awhile");
       var photosLibraryClient = (PhotosLibraryClient) map.get("client");
@@ -163,10 +182,10 @@ public class GoogleService {
                                                                                    .newBuilder()
                                                                                    .setPageSize(100)
                                                                                    .build());
-      final var list = new ArrayList<MediaItemWithGoogleToken>();
+      final var list = new ArrayList<MediaItemWithRefreshToken>();
       listMediaItemsPagedResponse.getPage()
         .getValues()
-        .forEach(mediaItem -> list.add(new MediaItemWithGoogleToken(mediaItem, refreshToken)));
+        .forEach(mediaItem -> list.add(new MediaItemWithRefreshToken(mediaItem, refreshToken)));
 
       var nextPageToken = listMediaItemsPagedResponse.getNextPageToken();
       var nextPage = listMediaItemsPagedResponse.getPage().getNextPage();
@@ -174,7 +193,7 @@ public class GoogleService {
       while (StringUtils.isNotEmpty(nextPageToken)) {
         logger.info("getting next page");
         nextPage.getValues()
-          .forEach(mediaItem -> list.add(new MediaItemWithGoogleToken(mediaItem, refreshToken)));
+          .forEach(mediaItem -> list.add(new MediaItemWithRefreshToken(mediaItem, refreshToken)));
         nextPageToken = nextPage.getNextPageToken();
         nextPage = nextPage.getNextPage();
         index++;
@@ -184,50 +203,32 @@ public class GoogleService {
       photosLibraryClient.close();
       return Flux.fromIterable(list)
                .flatMap(mediaItemDupeCheck(jwt))
-               .filter(mediaItemWithGoogleToken -> mediaItemWithGoogleToken != null)
+               .filter(mediaItemWithRefreshToken -> mediaItemWithRefreshToken != null)
                .collectList()
-               .doOnNext(mediaItemWithGoogleToken -> logger.info("{} new mediaItems", mediaItemWithGoogleToken.size()))
+               .doOnNext(mediaItemWithRefreshTokens -> logger.info("{} new mediaItems", mediaItemWithRefreshTokens.size()))
                .flatMapIterable(mediaItemWithGoogleToken -> mediaItemWithGoogleToken);
     }).doOnError((e) -> logger.error("error getting google photos {}", e.getMessage()))
              .subscribeOn(Schedulers.elastic());
   }
 
-  private Function<MediaItemWithGoogleToken, Publisher<? extends MediaItemWithGoogleToken>> mediaItemDupeCheck(Jwt jwt) {
-    return mediaItemWithGoogleToken ->
-             mediaItemRepository.mediaItemExists(jwt.getClaimAsString("sub"), mediaItemWithGoogleToken
+  private Function<MediaItemWithRefreshToken, Publisher<? extends MediaItemWithRefreshToken>> mediaItemDupeCheck(Jwt jwt) {
+    return mediaItemWithRefreshToken ->
+             mediaItemRepository.mediaItemExists(jwt.getClaimAsString("sub"), mediaItemWithRefreshToken
                                                                                 .getMediaItem()
                                                                                 .getFilename())
                .flatMap(exists -> {
                  if (exists.getId() != null) {
-                   logger.info("dupe found {}", exists.getTitle());
                    return Mono.empty();
                  }
-                 return Mono.just(mediaItemWithGoogleToken);
-               }).doOnError(err -> logger.error("error doing dupe check {}", err.getMessage()))
-      ;
+                 return Mono.just(mediaItemWithRefreshToken);
+               }).doOnError(err -> logger.error("error doing dupe check {}", err.getMessage()));
   }
 
-  private Flux<MediaItemWithGoogleToken> getGooglePhotosByDate(Map<String, Object> map) {
+  private Flux<MediaItemWithRefreshToken> getGooglePhotosByDate(Map<String, Object> map) {
     return Flux.defer(() -> {
       logger.info("getting google photos.. may take awhile");
       var photosLibraryClient = (PhotosLibraryClient) map.get("client");
       var refreshToken = (String) map.get("refreshToken");
-// Create a new com.google.type.Date object using a builder
-// Note that there are different valid combinations as described above
-      var dayFebruary15 = com.google.type.Date.newBuilder()
-                            .setDay(15)
-                            .setMonth(2)
-                            .build();
-// Create a new dateFilter. You can also set multiple dates here
-      var day2013 = com.google.type.Date.newBuilder()
-                      .setYear(2013)
-                      .build();
-// Create a new com.google.type.Date object for November 2011
-      var day2011November = com.google.type.Date.newBuilder()
-                              .setMonth(11)
-                              .setYear(2011)
-                              .build();
-// Create a date range for January to March
       var dateRangeJanuaryToMarch = DateRange.newBuilder()
                                       .setStartDate(com.google.type.Date.newBuilder().setMonth(1).build())
                                       .setEndDate(com.google.type.Date.newBuilder().setMonth(3).build())
@@ -237,27 +238,18 @@ public class GoogleService {
                                      .setStartDate(com.google.type.Date.newBuilder().setMonth(3).setDay(24).build())
                                      .setEndDate(com.google.type.Date.newBuilder().setMonth(5).setDay(2).build())
                                      .build();
-// Create a new dateFilter with the dates and date ranges
-      var dateFilter = DateFilter.newBuilder()
-                         .addDates(day2013)
-                         .addDates(day2011November)
-                         .addRanges(dateRangeJanuaryToMarch)
-                         .addRanges(dateRangeMarch24toMay2)
-                         .build();
-// Create a new Filters object
+      DateFilter dateFilter = DateFilter.newBuilder()
+                                .addRanges(dateRangeJanuaryToMarch)
+                                .build();
       var filters = Filters.newBuilder()
                       .setDateFilter(dateFilter)
                       .build();
-      final var listMediaItemsPagedResponse = photosLibraryClient.listMediaItems(ListMediaItemsRequest
-                                                                                   .newBuilder()
-
-                                                                                   .setPageSize(100)
-                                                                                   .build());
+      var listMediaItemsPagedResponse = photosLibraryClient.searchMediaItems(SearchMediaItemsRequest.newBuilder().setPageSize(100).setFilters(filters).build());
       logger.info("response {}", listMediaItemsPagedResponse);
-      final var list = new ArrayList<MediaItemWithGoogleToken>();
+      final var list = new ArrayList<MediaItemWithRefreshToken>();
       listMediaItemsPagedResponse.getPage()
         .getValues()
-        .forEach(mediaItem -> list.add(new MediaItemWithGoogleToken(mediaItem, refreshToken)));
+        .forEach(mediaItem -> list.add(new MediaItemWithRefreshToken(mediaItem, refreshToken)));
 
       var nextPageToken = listMediaItemsPagedResponse.getNextPageToken();
       var nextPage = listMediaItemsPagedResponse.getPage().getNextPage();
@@ -265,7 +257,7 @@ public class GoogleService {
       while (StringUtils.isNotEmpty(nextPageToken)) {
         logger.info("getting next page");
         nextPage.getValues()
-          .forEach(mediaItem -> list.add(new MediaItemWithGoogleToken(mediaItem, refreshToken)));
+          .forEach(mediaItem -> list.add(new MediaItemWithRefreshToken(mediaItem, refreshToken)));
         nextPageToken = nextPage.getNextPageToken();
         nextPage = nextPage.getNextPage();
         index++;
@@ -279,30 +271,30 @@ public class GoogleService {
   }
 
 
-  private Mono<MediaItem> downloadGoogleMediaItem(Jwt accessToken, MediaItemWithGoogleToken mediaItemWithGoogleToken) {
-    var mediaItem = mediaItemWithGoogleToken.getMediaItem();
-    var contentType = getContentType(mediaItem.getMimeType());
-    var mediaType = mediaItemService.getMediaType(mediaItem.getMimeType());
+  private Mono<MediaItem> downloadGoogleMediaItem(Jwt accessToken, MediaItemWithRefreshToken mediaItemWithRefreshToken) {
+    var mediaItem = mediaItemWithRefreshToken.getMediaItem();
+    var contentType = ContentType.fromString(mediaItem.getMimeType()).getValue();
+    var mediaType = getMediaType(mediaItem.getMimeType());
     final var googleTempDir = new File("/tmp/google_photos");
     if (!googleTempDir.exists()) {
       googleTempDir.mkdirs();
     }
     if (contentType.equalsIgnoreCase("gif")) {
-      logger.warn("skipping gif {}", mediaItemWithGoogleToken.getMediaItem().getFilename());
+      logger.warn("skipping gif {}", mediaItemWithRefreshToken.getMediaItem().getFilename());
       return Mono.empty();
     }
     if (mediaType.equalsIgnoreCase("photo")) {
-      return getMediaItemImage(mediaItemWithGoogleToken, contentType);
+      return getMediaItemImage(mediaItemWithRefreshToken, contentType);
     } else {
-      return getMediaItemVideo(mediaItemWithGoogleToken);
+      return getMediaItemVideo(mediaItemWithRefreshToken);
     }
   }
 
-  private Mono<MediaItem> getMediaItemImage(MediaItemWithGoogleToken mediaItemWithGoogleToken, String contentType) {
-    logger.info("Downloading image {}", mediaItemWithGoogleToken.getMediaItem().getFilename());
-    var mediaItem = mediaItemWithGoogleToken.getMediaItem();
+  private Mono<MediaItem> getMediaItemImage(MediaItemWithRefreshToken mediaItemWithRefreshToken, String contentType) {
+    logger.debug("Downloading image {}", mediaItemWithRefreshToken.getMediaItem().getFilename());
+    var mediaItem = mediaItemWithRefreshToken.getMediaItem();
     return downloadImage(mediaItem, contentType)
-             .onErrorResume(retryMediaItemDownload(mediaItemWithGoogleToken, contentType, mediaItem))
+             .onErrorResume(retryMediaItemDownload(mediaItemWithRefreshToken, contentType, mediaItem))
              .retryBackoff(20, Duration.ofMinutes(1));
   }
 
@@ -317,20 +309,20 @@ public class GoogleService {
       image = null;
       return mediaItem;
     }).doOnError(error -> logger.error("error downloading image from google {} {}", mediaItem.getFilename(), error))
-             .doOnNext(x -> logger.info("downloaded image from google {}", mediaItem.getFilename()));
+             .doOnNext(x -> logger.debug("downloaded image from google {}", mediaItem.getFilename()));
   }
 
-  private Mono<MediaItem> getMediaItemVideo(MediaItemWithGoogleToken mediaItemWithGoogleToken) {
-    logger.info("Downloading image {}", mediaItemWithGoogleToken.getMediaItem().getFilename());
-    var mediaItem = mediaItemWithGoogleToken.getMediaItem();
+  private Mono<MediaItem> getMediaItemVideo(MediaItemWithRefreshToken mediaItemWithRefreshToken) {
+    logger.debug("Downloading image {}", mediaItemWithRefreshToken.getMediaItem().getFilename());
+    var mediaItem = mediaItemWithRefreshToken.getMediaItem();
     return downloadVideo(mediaItem)
-             .onErrorResume(retryMediaItemDownload(mediaItemWithGoogleToken, null, mediaItem))
+             .onErrorResume(retryMediaItemDownload(mediaItemWithRefreshToken, null, mediaItem))
              .retryBackoff(20, Duration.ofMinutes(1));
   }
 
   private Mono<MediaItem> downloadVideo(MediaItem mediaItem) {
     return Mono.fromCallable(() -> {
-      logger.info("Downloading video {}", mediaItem.getFilename());
+      logger.debug("Downloading video {}", mediaItem.getFilename());
       ReadableByteChannel readableByteChannel = null;
       readableByteChannel = Channels.newChannel(new URL(mediaItem.getBaseUrl() + "=dv").openStream());
       FileOutputStream fileOutputStream = new FileOutputStream("/tmp/google_photos/" + mediaItem.getFilename());
@@ -340,17 +332,16 @@ public class GoogleService {
       return mediaItem;
     }).doOnError(error -> logger.error("error downloading video from google {} {}", mediaItem.getFilename(), error))
              .retryBackoff(20, Duration.ofMinutes(1))
-             .doOnNext(x -> logger.info("downloaded video from google {}", mediaItem.getFilename()));
+             .doOnNext(x -> logger.debug("downloaded video from google {}", mediaItem.getFilename()));
   }
 
-  private Function<Throwable, Mono<? extends MediaItem>> retryMediaItemDownload(MediaItemWithGoogleToken mediaItemWithGoogleToken, String contentType, MediaItem mediaItem) {
+  private Function<Throwable, Mono<? extends MediaItem>> retryMediaItemDownload(MediaItemWithRefreshToken mediaItemWithRefreshToken, String contentType, MediaItem mediaItem) {
     return error -> {
       logger.error("download retrying because {}", error.getMessage());
-      var refreshToken = mediaItemWithGoogleToken.getRefreshToken();
+      var refreshToken = mediaItemWithRefreshToken.getRefreshToken();
       return refreshExchangeGoogle(refreshToken)
                .flatMap(newAccessToken -> {
                  try {
-                   logger.info("refreshing refreshToken {}", refreshToken);
                    final var settings = PhotosLibrarySettings
                                           .newBuilder()
                                           .setCredentialsProvider(FixedCredentialsProvider
@@ -373,57 +364,112 @@ public class GoogleService {
     };
   }
 
-  private String getContentType(String mimeType) {
-    if (mimeType.toLowerCase().endsWith("png")) {
-      return "png";
-    } else if (mimeType.toLowerCase().endsWith("jpg") || mimeType.toLowerCase().endsWith("jpeg")) {
-      return "jpg";
-    } else if (mimeType.toLowerCase().endsWith("mp4")) {
-      return "mp4";
-    } else if (mimeType.toLowerCase().endsWith("mov")) {
-      return "mov";
-    } else if (mimeType.toLowerCase().endsWith("wmv")) {
-      return "wmv";
-    } else if (mimeType.toLowerCase().endsWith("avi")) {
-      return "avi";
-    } else if (mimeType.toLowerCase().endsWith("3pg")) {
-      return "3pg";
-    } else if (mimeType.toLowerCase().endsWith("mkv")) {
-      return "mkv";
-    } else if (mimeType.toLowerCase().endsWith("gif")) {
-      return "gif";
+  public Mono<com.kooriim.pas.domain.MediaItem> processGoogleMediaItem(Jwt accessToken, com.google.photos.types.proto.MediaItem mediaItem) {
+    logger.debug("uploading mediaItem {}", mediaItem.getFilename());
+    final var file = new File("/tmp/google_photos/" + mediaItem.getFilename());
+    logger.debug("processing google media item {}", mediaItem.getFilename());
+    final var contentType = ContentType.fromString(mediaItem.getFilename()).getValue();
+    final var mediaType = getMediaType(mediaItem.getMimeType());
+    if (contentType.equalsIgnoreCase("gif")) {
+      logger.warn("skipping gif 2 {}", mediaItem.getFilename());
+      return Mono.empty();
     }
-    return "jpg";
+    if (mediaType.equalsIgnoreCase("photo")) {
+      return pushCompressedGooglePhotoToS3(mediaItem, accessToken.getClaimAsString("sub"), file, mediaType, contentType);
+    } else {
+      return pushGoogleVideoToS3(mediaItem, accessToken.getClaimAsString("sub"), file.getName(), contentType);
+    }
   }
 
-//  public Mono<String> getUserAccessToken() {
-//    return ReactiveSecurityContextHolder
-//             .getContext()
-//             .doOnError(error -> logger.error("error authorizing user context {}", error))
-//             .publishOn(Schedulers.boundedElastic())
-//             .map(SecurityContext::getAuthentication)
-//             .cast(JwtAuthenticationToken.class)
-//             .map(JwtAuthenticationToken::getToken)
-//             .map(Jwt::getTokenValue)
-//             .doOnNext(x -> logger.info("Got User AccessToken"));
-//  }
-//
-//  class DefaultHttpTransportFactory implements HttpTransportFactory {
-//    final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
-//
-//    public HttpTransport create() {
-//      return HTTP_TRANSPORT;
-//    }
-//
-//  }
-//
-//  private boolean shouldRefresh(GoogleTokenResponse googleTokenResponse) {
-//    Long expiresIn = getExpiresInMilliseconds(googleTokenResponse);
-//    return expiresIn <= 60000L * 5L;
-//  }
-//
-//  private Long getExpiresInMilliseconds(GoogleTokenResponse googleTokenResponse) {
-//    var date = Date.from(Instant.now().plusSeconds(Long.valueOf(googleTokenResponse.getExpiresIn())));
-//    return (date.getTime() - Clock.SYSTEM.currentTimeMillis());
-//  }
+  private Mono<com.kooriim.pas.domain.MediaItem> pushGoogleVideoToS3(com.google.photos.types.proto.MediaItem mediaItem, String googleId, String fileName, String contentType) {
+    return Mono.fromCallable(() -> {
+      final var filePath = "/tmp/google_photos/" + fileName;
+      final var tempFile = new File(filePath);
+      final var thumbnailPath = ThumbnailGenerator.randomGrabberFFmpegImage(filePath, 2);
+      final var tempThumbnailFile = new File(thumbnailPath);
+
+      var thumbnailKey = "thumbnail." + thumbnailPath.substring(thumbnailPath.lastIndexOf("/") + 1);
+
+      byte[] compressedThumbnailResult = compressPhoto("png", ImageIO.read(tempThumbnailFile), 360f, 270f);
+
+      final var thumbnailSize = compressedThumbnailResult.length / 1024;//kb
+      final var videoSize = Long.valueOf(tempFile.length()).intValue() / 1024;//kb
+
+      awsS3Client.putObject(PutObjectRequest
+                              .builder()
+                              .bucket(S3_BUCKET_NAME)
+                              .key(fileName)
+                              .build(), AsyncRequestBody.fromFile(tempFile)).whenComplete((response, err) -> tempFile.delete());
+
+      awsS3Client.putObject(PutObjectRequest
+                              .builder()
+                              .bucket(S3_BUCKET_NAME)
+                              .key(thumbnailKey) // check key hnanme
+                              .build(), AsyncRequestBody.fromBytes(compressedThumbnailResult)).whenComplete((response, err) -> tempThumbnailFile.delete());
+      return com.kooriim.pas.domain.MediaItem.newInstanceVideo(fileName,
+        S3_BUCKET_BASE_URL + thumbnailKey,
+        S3_BUCKET_BASE_URL + fileName,
+        contentType,
+        googleId,
+        "video",
+        thumbnailSize,
+        videoSize,
+        mediaItem);
+    }).doOnError(error -> logger.error("error creating google video {} {}", fileName, error.getMessage()))
+             .retryBackoff(20, Duration.ofMinutes(1))
+             .doOnNext(x -> logger.debug("successfully created google video {}", fileName));
+  }
+
+  protected Mono<com.kooriim.pas.domain.MediaItem> pushCompressedGooglePhotoToS3(com.google.photos.types.proto.MediaItem mediaItem, String googleId, File file, String mediaType, String contentType) {
+    return Mono.fromCallable(() -> {
+      var image = ImageIO.read(file);
+      byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
+      byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
+      final var fileName = file.getName();
+      final var thumbnailKey = "thumbnail." + fileName;
+      final var compressedKey = "compressed." + fileName;
+      final var originalKey = "original." + fileName;
+      final var compressedSize = compressedImageResult.length / 1024;//kb
+      final var thumbnailSize = compressedThumbnailResult.length / 1024;//kb
+      final var originalSize = Long.valueOf(file.length()).intValue() / 1024;//kb
+      awsS3Client.putObject(PutObjectRequest
+                              .builder()
+                              .bucket(S3_BUCKET_NAME)
+                              .key(compressedKey)
+                              .build(), AsyncRequestBody.fromBytes(compressedImageResult)).get();
+      compressedImageResult = null;
+
+      awsS3Client.putObject(PutObjectRequest
+                              .builder()
+                              .bucket(S3_BUCKET_NAME)
+                              .key(thumbnailKey)
+                              .build(), AsyncRequestBody.fromBytes(compressedThumbnailResult)).get();
+      compressedThumbnailResult = null;
+      awsS3Client.putObject(PutObjectRequest
+                              .builder()
+                              .bucket(S3_BUCKET_NAME)
+                              .key(originalKey)
+                              .build(), AsyncRequestBody.fromFile(file)).whenComplete((response, err) -> {
+        if (err != null) {
+          logger.error("failed uploading google photo {}", err);
+        }
+        file.delete();
+      });
+      return com.kooriim.pas.domain.MediaItem.newInstancePhoto(file.getName(),
+        S3_BUCKET_BASE_URL + compressedKey,
+        S3_BUCKET_BASE_URL + originalKey,
+        S3_BUCKET_BASE_URL + thumbnailKey,
+        contentType,
+        googleId,
+        mediaType,
+        thumbnailSize,
+        compressedSize,
+        originalSize,
+        mediaItem);
+
+    })
+             .doOnError(error -> logger.error("error creating google photo {} {}", file.getName(), error))
+             .retryBackoff(20, Duration.ofMinutes(1))
+             .doOnNext(x -> logger.debug("successfully created google photo {}", file.getName()));
+  }
 }

@@ -2,12 +2,12 @@ package com.kooriim.pas.domain;
 
 import com.google.photos.types.proto.MediaItem;
 
-public class MediaItemWithGoogleToken {
+public class MediaItemWithRefreshToken {
   private com.google.photos.types.proto.MediaItem mediaItem;
   private String refreshToken;
 
-  public MediaItemWithGoogleToken(){}
-  public MediaItemWithGoogleToken(MediaItem mediaItem, String refreshToken) {
+  public MediaItemWithRefreshToken(){}
+  public MediaItemWithRefreshToken(MediaItem mediaItem, String refreshToken) {
     this.mediaItem = mediaItem;
     this.refreshToken = refreshToken;
   }
