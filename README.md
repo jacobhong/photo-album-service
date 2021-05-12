@@ -71,13 +71,13 @@ cd keycloak/bin
 
 update certs
 
-create cert for photos and login.kooriim
-create manual cert for keycloak.kooriim
-copy crt from pas to kk ec2 in cert folder, reference from docker compose
+-create cert for photos and login.kooriim
+ certbot certonly --standalone
+-create manual cert for keycloak.kooriim
+ certbot -d keycloak.kooriim.com --manual --preferred-challenges dns certonly
+
 -rw-r-xr-x 1 ubuntu ubuntu 3440 Feb  5 23:37 tls.crt
 -rw-r-xr-x 1 ubuntu ubuntu 1704 Feb  5 23:38 tls.key
    93  chmod 755 photo-album-service/docker/keystore/keycloak/*
-   95  chmod 777 photo-album-service/docker/keystore/keycloak/*
 
 scp -C -i "~/work/kooriim/kkloak.pem" fullchain.pem ubuntu@54.177.78.38:fullchain.pem
-certbot -d keycloak.kooriim.com --manual --preferred-challenges dns certonly

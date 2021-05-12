@@ -34,6 +34,7 @@ public class MediaItemMetaDataRepository {
       return result;
     }).doOnNext(result -> logger.info("Saved mediaItemMetaData {}", result.getId()))
              .doOnError(error -> logger.error("Error saving mediaItemMetaData {}", error.getMessage()))
+             .flatMap(result -> Mono.just(result))
              .subscribeOn(Schedulers.boundedElastic());
   }
 

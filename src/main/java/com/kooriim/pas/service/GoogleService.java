@@ -1,6 +1,7 @@
 package com.kooriim.pas.service;
 
 import com.google.api.gax.core.FixedCredentialsProvider;
+import com.google.api.gax.paging.AbstractPagedListResponse;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.UserCredentials;
 import com.google.photos.library.v1.PhotosLibraryClient;
@@ -44,6 +45,8 @@ import java.nio.channels.ReadableByteChannel;
 import java.sql.Date;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.function.Function;
@@ -99,11 +102,11 @@ public class GoogleService {
    *
    * @return
    */
-  public Flux<com.kooriim.pas.domain.MediaItem> syncGooglePhotos(Jwt jwt) {
+  public Flux<com.kooriim.pas.domain.MediaItem> syncGooglePhotos(Jwt jwt, Map<String, Instant> dates) {
     var user = userRepository.findByGoogleId(jwt.getClaimAsString("sub"));
     return getGoogleAccessToken(jwt)
              .flatMap(googleTokenResponse -> init(user.get().getRefreshToken(), googleTokenResponse, jwt))
-             .flatMapMany(this::getGooglePhotos)
+             .flatMapMany(map -> getGooglePhotos(map, dates))
              .delayUntil(d -> Mono.delay(Duration.ofSeconds(1)))
              .flatMap(mediaItem -> downloadGoogleMediaItem(jwt, mediaItem))
              .flatMap(mediaItem -> processGoogleMediaItem(jwt, mediaItem))
@@ -172,34 +175,48 @@ public class GoogleService {
              .doOnNext(x -> logger.info("successfully initialized photos library client"));
   }
 
-  private Flux<MediaItemWithRefreshToken> getGooglePhotos(Map<String, Object> map) {
+  private Flux<MediaItemWithRefreshToken> getGooglePhotos(Map<String, Object> map, Map<String, Instant> dates) {
     return Flux.defer(() -> {
       logger.info("getting google photos.. may take awhile");
       var photosLibraryClient = (PhotosLibraryClient) map.get("client");
       var refreshToken = (String) map.get("refreshToken");
       var jwt = (Jwt) map.get("jwt");
-      final var listMediaItemsPagedResponse = photosLibraryClient.listMediaItems(ListMediaItemsRequest
-                                                                                   .newBuilder()
-                                                                                   .setPageSize(100)
-                                                                                   .build());
-      final var list = new ArrayList<MediaItemWithRefreshToken>();
-      listMediaItemsPagedResponse.getPage()
-        .getValues()
-        .forEach(mediaItem -> list.add(new MediaItemWithRefreshToken(mediaItem, refreshToken)));
+      AbstractPagedListResponse searchRequest = null;
+      if (dates != null && dates.containsKey("startDate") && dates.containsKey("endDate")) {
+        var startDate = LocalDate.ofInstant(dates.get("startDate"), ZoneId.of("UTC"));
+        var endDate = LocalDate.ofInstant(dates.get("endDate"), ZoneId.of("UTC"));
+        var dateRange = DateRange.newBuilder()
+                          .setStartDate(com.google.type.Date.newBuilder()
+                                          .setMonth(startDate.getMonthValue())
+                                          .setDay(startDate.getDayOfMonth())
+                                          .setYear(startDate.getYear())
+                                          .build())
+                          .setEndDate(com.google.type.Date.newBuilder()
+                                        .setMonth(endDate.getMonthValue())
+                                        .setDay(endDate.getDayOfMonth())
+                                        .setYear(endDate.getYear())
+                                        .build())
+                          .build();
+        var dateFilter = DateFilter.newBuilder()
+                           .addRanges(dateRange)
+                           .build();
+        var filters = Filters.newBuilder()
+                        .setDateFilter(dateFilter)
+                        .build();
+        searchRequest = photosLibraryClient.searchMediaItems(SearchMediaItemsRequest.newBuilder()
+                                                               .setPageSize(100)
+                                                               .setFilters(filters)
+                                                               .build());
+      } else {
 
-      var nextPageToken = listMediaItemsPagedResponse.getNextPageToken();
-      var nextPage = listMediaItemsPagedResponse.getPage().getNextPage();
-      var index = 0; // TODO batch get here instead
-      while (StringUtils.isNotEmpty(nextPageToken)) {
-        logger.info("getting next page");
-        nextPage.getValues()
-          .forEach(mediaItem -> list.add(new MediaItemWithRefreshToken(mediaItem, refreshToken)));
-        nextPageToken = nextPage.getNextPageToken();
-        nextPage = nextPage.getNextPage();
-        index++;
-        // store index  or date of last itemand try later
+        searchRequest = photosLibraryClient.listMediaItems(ListMediaItemsRequest
+                                                             .newBuilder()
+                                                             .setPageSize(100)
+                                                             .build());
       }
+      var list = fetchAllPages(refreshToken, searchRequest);
       logger.info("total mediaItems in google {}", list.size());
+
       photosLibraryClient.close();
       return Flux.fromIterable(list)
                .flatMap(mediaItemDupeCheck(jwt))
@@ -209,6 +226,27 @@ public class GoogleService {
                .flatMapIterable(mediaItemWithGoogleToken -> mediaItemWithGoogleToken);
     }).doOnError((e) -> logger.error("error getting google photos {}", e.getMessage()))
              .subscribeOn(Schedulers.elastic());
+  }
+
+  private ArrayList<MediaItemWithRefreshToken> fetchAllPages(String refreshToken, AbstractPagedListResponse mediaItemsPagedResponse) {
+    final var list = new ArrayList<MediaItemWithRefreshToken>();
+    mediaItemsPagedResponse.getPage()
+      .getValues()
+      .forEach(mediaItem -> list.add(new MediaItemWithRefreshToken((MediaItem) mediaItem, refreshToken)));
+
+    var nextPageToken = mediaItemsPagedResponse.getNextPageToken();
+    var nextPage = mediaItemsPagedResponse.getPage().getNextPage();
+    var index = 0; // TODO batch get here instead
+    while (StringUtils.isNotEmpty(nextPageToken)) {
+      logger.info("getting next page");
+      nextPage.getValues()
+        .forEach(mediaItem -> list.add(new MediaItemWithRefreshToken((MediaItem) mediaItem, refreshToken)));
+      nextPageToken = nextPage.getNextPageToken();
+      nextPage = nextPage.getNextPage();
+      index++;
+      // store index  or date of last itemand try later
+    }
+    return list;
   }
 
   private Function<MediaItemWithRefreshToken, Publisher<? extends MediaItemWithRefreshToken>> mediaItemDupeCheck(Jwt jwt) {
@@ -223,53 +261,6 @@ public class GoogleService {
                  return Mono.just(mediaItemWithRefreshToken);
                }).doOnError(err -> logger.error("error doing dupe check {}", err.getMessage()));
   }
-
-  private Flux<MediaItemWithRefreshToken> getGooglePhotosByDate(Map<String, Object> map) {
-    return Flux.defer(() -> {
-      logger.info("getting google photos.. may take awhile");
-      var photosLibraryClient = (PhotosLibraryClient) map.get("client");
-      var refreshToken = (String) map.get("refreshToken");
-      var dateRangeJanuaryToMarch = DateRange.newBuilder()
-                                      .setStartDate(com.google.type.Date.newBuilder().setMonth(1).build())
-                                      .setEndDate(com.google.type.Date.newBuilder().setMonth(3).build())
-                                      .build();
-// Create a date range for March 24 to May 2
-      var dateRangeMarch24toMay2 = DateRange.newBuilder()
-                                     .setStartDate(com.google.type.Date.newBuilder().setMonth(3).setDay(24).build())
-                                     .setEndDate(com.google.type.Date.newBuilder().setMonth(5).setDay(2).build())
-                                     .build();
-      DateFilter dateFilter = DateFilter.newBuilder()
-                                .addRanges(dateRangeJanuaryToMarch)
-                                .build();
-      var filters = Filters.newBuilder()
-                      .setDateFilter(dateFilter)
-                      .build();
-      var listMediaItemsPagedResponse = photosLibraryClient.searchMediaItems(SearchMediaItemsRequest.newBuilder().setPageSize(100).setFilters(filters).build());
-      logger.info("response {}", listMediaItemsPagedResponse);
-      final var list = new ArrayList<MediaItemWithRefreshToken>();
-      listMediaItemsPagedResponse.getPage()
-        .getValues()
-        .forEach(mediaItem -> list.add(new MediaItemWithRefreshToken(mediaItem, refreshToken)));
-
-      var nextPageToken = listMediaItemsPagedResponse.getNextPageToken();
-      var nextPage = listMediaItemsPagedResponse.getPage().getNextPage();
-      var index = 0; // TODO batch get here instead
-      while (StringUtils.isNotEmpty(nextPageToken)) {
-        logger.info("getting next page");
-        nextPage.getValues()
-          .forEach(mediaItem -> list.add(new MediaItemWithRefreshToken(mediaItem, refreshToken)));
-        nextPageToken = nextPage.getNextPageToken();
-        nextPage = nextPage.getNextPage();
-        index++;
-        // store index  or date of last itemand try later
-      }
-      logger.info("returning google list size {}", list.size());
-      return Flux.fromIterable(list);
-    }).doOnError((e) -> logger.error("error getting google photos {}", e.getMessage()))
-//             .doOnNext(x -> logger.info("finished getting photos from google"))
-             .subscribeOn(Schedulers.elastic());
-  }
-
 
   private Mono<MediaItem> downloadGoogleMediaItem(Jwt accessToken, MediaItemWithRefreshToken mediaItemWithRefreshToken) {
     var mediaItem = mediaItemWithRefreshToken.getMediaItem();

@@ -6,7 +6,6 @@ import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.SelectBeforeUpdate;
 
 import javax.persistence.*;
-import java.time.Instant;
 import java.util.Date;
 
 @Entity
@@ -25,27 +24,41 @@ public class MediaItemMetaData {
   private float apertureFNumber;
   private String cameraModel;
   private int isoEquivalent;
-  private long exposureTime;
+  private float exposureTime;
   private long width;
   private long height;
   private double fps;
 
-  public MediaItemMetaData (){}
+  private String contrast;
+  private float digitalZoomRatio;
+  private float exposureCompensation;
+  private String exposureMode;
+  private String exposureProgram;
+  private float flash;
+  private String lensModel;
+  private String meteringMode;
+  private String saturation;
+  private String sceneCaptureType;
+  private String sharpness;
+  private String whiteBalance;
+  private Date createdDate;
 
-  public MediaItemMetaData(MediaMetadata mediaMetadata) {
+  public static MediaItemMetaData fromGoogleMetaData(MediaMetadata mediaMetadata) {
+    var mediaItemMetaData = new MediaItemMetaData();
     if (mediaMetadata.getPhoto() != null) {
-      cameraMake = mediaMetadata.getPhoto().getCameraMake();
-      cameraModel = mediaMetadata.getPhoto().getCameraModel();
-      focalLength = mediaMetadata.getPhoto().getFocalLength();
-      apertureFNumber = mediaMetadata.getPhoto().getApertureFNumber();
-      isoEquivalent = mediaMetadata.getPhoto().getIsoEquivalent();
-      exposureTime = mediaMetadata.getPhoto().getExposureTime().getSeconds();
+      mediaItemMetaData.setCameraMake(mediaMetadata.getPhoto().getCameraMake());
+      mediaItemMetaData.setCameraModel(mediaMetadata.getPhoto().getCameraModel());
+      mediaItemMetaData.setFocalLength(mediaMetadata.getPhoto().getFocalLength());
+      mediaItemMetaData.setApertureFNumber(mediaMetadata.getPhoto().getApertureFNumber());
+      mediaItemMetaData.setIsoEquivalent(mediaMetadata.getPhoto().getIsoEquivalent());
+      mediaItemMetaData.setExposureTime(mediaMetadata.getPhoto().getExposureTime().getSeconds());
     }
     if (mediaMetadata.getVideo() != null) {
-      fps = mediaMetadata.getVideo().getFps();
+      mediaItemMetaData.setFps(mediaMetadata.getVideo().getFps());
     }
-    width = mediaMetadata.getWidth();
-    height = mediaMetadata.getHeight();
+    mediaItemMetaData.setWidth(mediaMetadata.getWidth());
+    mediaItemMetaData.setHeight(mediaMetadata.getHeight());
+    return mediaItemMetaData;
   }
 
   public Integer getId() {
@@ -112,12 +125,8 @@ public class MediaItemMetaData {
     this.isoEquivalent = isoEquivalent;
   }
 
-  public long getExposureTime() {
+  public float getExposureTime() {
     return exposureTime;
-  }
-
-  public void setExposureTime(long exposureTime) {
-    this.exposureTime = exposureTime;
   }
 
   public long getWidth() {
@@ -134,5 +143,113 @@ public class MediaItemMetaData {
 
   public void setHeight(long height) {
     this.height = height;
+  }
+
+  public void setExposureTime(float exposureTime) {
+    this.exposureTime = exposureTime;
+  }
+
+  public String getContrast() {
+    return contrast;
+  }
+
+  public void setContrast(String contrast) {
+    this.contrast = contrast;
+  }
+
+  public float getDigitalZoomRatio() {
+    return digitalZoomRatio;
+  }
+
+  public void setDigitalZoomRatio(float digitalZoomRatio) {
+    this.digitalZoomRatio = digitalZoomRatio;
+  }
+
+  public float getExposureCompensation() {
+    return exposureCompensation;
+  }
+
+  public void setExposureCompensation(float exposureCompensation) {
+    this.exposureCompensation = exposureCompensation;
+  }
+
+  public String getExposureMode() {
+    return exposureMode;
+  }
+
+  public void setExposureMode(String exposureMode) {
+    this.exposureMode = exposureMode;
+  }
+
+  public String getExposureProgram() {
+    return exposureProgram;
+  }
+
+  public void setExposureProgram(String exposureProgram) {
+    this.exposureProgram = exposureProgram;
+  }
+
+  public float getFlash() {
+    return flash;
+  }
+
+  public void setFlash(float flash) {
+    this.flash = flash;
+  }
+
+  public String getLensModel() {
+    return lensModel;
+  }
+
+  public void setLensModel(String lensModel) {
+    this.lensModel = lensModel;
+  }
+
+  public String getMeteringMode() {
+    return meteringMode;
+  }
+
+  public void setMeteringMode(String meteringMode) {
+    this.meteringMode = meteringMode;
+  }
+
+  public String getSaturation() {
+    return saturation;
+  }
+
+  public void setSaturation(String saturation) {
+    this.saturation = saturation;
+  }
+
+  public String getSceneCaptureType() {
+    return sceneCaptureType;
+  }
+
+  public void setSceneCaptureType(String sceneCaptureType) {
+    this.sceneCaptureType = sceneCaptureType;
+  }
+
+  public String getSharpness() {
+    return sharpness;
+  }
+
+  public void setSharpness(String sharpness) {
+    this.sharpness = sharpness;
+  }
+
+  public String getWhiteBalance() {
+    return whiteBalance;
+  }
+
+  public void setWhiteBalance(String whiteBalance) {
+    this.whiteBalance = whiteBalance;
+  }
+
+  public Date getCreatedDate() {
+    return createdDate;
+  }
+
+  public void setCreatedDate(Date createdDate) {
+    this.createdDate = createdDate;
   }
 }

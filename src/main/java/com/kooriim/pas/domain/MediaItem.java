@@ -8,7 +8,8 @@ import javax.persistence.*;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.time.Instant;
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "media_item")
@@ -31,7 +32,7 @@ public class MediaItem implements Serializable {
   private String thumbnailFilePath;
   @Size(max = 255)
   private String videoFilePath;
-  @Size(max = 255)
+  @Size(max = 50)
   private String description;
   private Integer compressedImageFileSize;
   private Integer thumbnailImageFileSize;
@@ -48,9 +49,9 @@ public class MediaItem implements Serializable {
   private String mediaType;
   @Column(name = "is_public", nullable = false, columnDefinition = "BIT", length = 1)
   private Boolean isPublic;
-  private Date originalDate;
-  private Date created;
-  private Date updated;
+  private LocalDate originalDate;
+  private LocalDate created;
+  private LocalDate updated;
 
   public Integer getId() {
     return id;
@@ -172,27 +173,27 @@ public class MediaItem implements Serializable {
     isPublic = aPublic;
   }
 
-  public Date getCreated() {
+  public LocalDate getCreated() {
     return created;
   }
 
-  public void setCreated(Date created) {
+  public void setCreated(LocalDate created) {
     this.created = created;
   }
 
-  public Date getUpdated() {
+  public LocalDate getUpdated() {
     return updated;
   }
 
-  public void setUpdated(Date updated) {
+  public void setUpdated(LocalDate updated) {
     this.updated = updated;
   }
 
-  public Date getOriginalDate() {
+  public LocalDate getOriginalDate() {
     return originalDate;
   }
 
-  public void setOriginalDate(Date originalDate) {
+  public void setOriginalDate(LocalDate originalDate) {
     this.originalDate = originalDate;
   }
 
@@ -246,9 +247,9 @@ public class MediaItem implements Serializable {
     photo.setCompressedImageFileSize(compressedFileSize);
     photo.setOriginalImageFileSize(originalFileSize);
     if (mediaItem != null && mediaItem.getMediaMetadata() != null) {
-      final var mediaItemMetaData = new MediaItemMetaData(mediaItem.getMediaMetadata());
+      final var mediaItemMetaData = MediaItemMetaData.fromGoogleMetaData(mediaItem.getMediaMetadata());
       photo.setMediaItemMetaData(mediaItemMetaData);
-      photo.setOriginalDate(Date.from(Instant.ofEpochSecond(mediaItem.getMediaMetadata().getCreationTime().getSeconds())));
+      photo.setOriginalDate(LocalDate.ofInstant(Instant.ofEpochSecond(mediaItem.getMediaMetadata().getCreationTime().getSeconds()), ZoneId.of("UTC")));
     }
     return photo;
   }
@@ -267,9 +268,9 @@ public class MediaItem implements Serializable {
     video.thumbnailImageFileSize = thumbnailFileSize;
     video.videoFileSize = videoFileSize;
     if (mediaItem != null && mediaItem.getMediaMetadata() != null) {
-      final var mediaItemMetaData = new MediaItemMetaData(mediaItem.getMediaMetadata());
+      final var mediaItemMetaData = MediaItemMetaData.fromGoogleMetaData(mediaItem.getMediaMetadata());
       video.setMediaItemMetaData(mediaItemMetaData);
-      video.setOriginalDate(Date.from(Instant.ofEpochSecond(mediaItem.getMediaMetadata().getCreationTime().getSeconds())));
+      video.setOriginalDate(LocalDate.ofInstant(Instant.ofEpochSecond(mediaItem.getMediaMetadata().getCreationTime().getSeconds()), ZoneId.of("UTC")));
     }
     return video;
   }

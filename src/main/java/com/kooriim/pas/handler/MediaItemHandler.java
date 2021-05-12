@@ -1,6 +1,7 @@
 package com.kooriim.pas.handler;
 
 import com.kooriim.pas.domain.MediaItem;
+import com.kooriim.pas.domain.MediaItemMetaData;
 import com.kooriim.pas.service.MediaItemService;
 import net.minidev.json.JSONObject;
 import org.slf4j.Logger;
@@ -82,6 +83,14 @@ public class MediaItemHandler {
     })
              .doOnNext(mediaItems -> logger.info("patching mediaItems: {}", mediaItems))
              .flatMap(mediaItems -> mediaItemService.patchMediaItems(mediaItems).flatMap(v -> ServerResponse.ok().build()));
+
+  }
+
+  public Mono<ServerResponse> createMetaData(ServerRequest serverRequest) {
+    logger.info("creating metadata for id: {}", serverRequest.pathVariable("id"));
+    return serverRequest.bodyToMono(MediaItemMetaData.class)
+             .doOnNext(metaData -> logger.info("saving metaData: {}", metaData))
+             .flatMap(metaData -> mediaItemService.createMetaData(metaData).flatMap(v -> ServerResponse.ok().build()));
 
   }
 

@@ -1,6 +1,7 @@
 package com.kooriim.pas.service;
 
 import com.kooriim.pas.domain.MediaItem;
+import com.kooriim.pas.domain.MediaItemMetaData;
 import com.kooriim.pas.domain.enums.ContentType;
 import com.kooriim.pas.domain.error.ConflictException;
 import com.kooriim.pas.repository.MediaItemMetaDataRepository;
@@ -150,6 +151,11 @@ public class MediaItemService {
              .switchIfEmpty(Mono.just(mediaItem));
   }
 
+  public Mono<MediaItemMetaData> createMetaData(MediaItemMetaData mediaItemMetaData) {
+    return mediaItemMetaDataRepository.save(mediaItemMetaData);
+
+  }
+
   protected Mono<MediaItem> processMediaItem(String googleId, FilePart file) {
     final var contentType = ContentType.fromString(file.filename()).getValue();
     final var mediaType = getMediaType(contentType);
@@ -178,7 +184,7 @@ public class MediaItemService {
   }
 
   protected Mono<MediaItem> setBase64Photo(Map<String, String> params, MediaItem mediaItem) {
-    if (params.containsKey("thumbnail") && params.get("thumbnail").equalsIgnoreCase("true")) {
+    if (mediaItem.getMediaType().equalsIgnoreCase("video") || params.containsKey("thumbnail") && params.get("thumbnail").equalsIgnoreCase("true")) {
       return setBase64Thumbnail(mediaItem);
     }
     if (params.containsKey("compressedImage") && params.get("compressedImage").equalsIgnoreCase("true")) {

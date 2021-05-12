@@ -24,6 +24,7 @@ public class MediaItemRouter {
         .andRoute(GET("/videos/{title}").and(contentType(APPLICATION_OCTET_STREAM)).and(accept(APPLICATION_OCTET_STREAM)), mediaItemHandlerHandler::getVideoByTitle)
         .andRoute(GET("/photos").and(ACCEPTS_JSON), mediaItemHandlerHandler::getMediaItems)
         .andRoute(PATCH("/photos").and(CONTENT_TYPE_JSON), mediaItemHandlerHandler::patchMediaItems)
+        .andRoute(POST("/photos/{id}/metadata").and(ACCEPTS_JSON).and(CONTENT_TYPE_JSON), mediaItemHandlerHandler::createMetaData)
         .andRoute(DELETE("/photos/{id}").and(ACCEPTS_JSON), mediaItemHandlerHandler::deleteMediaItem)
         .andRoute(DELETE("/photos").and(CONTENT_TYPE_JSON), mediaItemHandlerHandler::deleteMediaItems)
         .andRoute(POST("/photos").and(ACCEPTS_JSON).and(RequestPredicates.contentType(MediaType.MULTIPART_FORM_DATA)), mediaItemHandlerHandler::create));
