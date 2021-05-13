@@ -55,6 +55,7 @@ s3:
   bucketName: kooriim-images-test
 logging:
   level:
+    com.kooriim: DEBUG
     org:
       springframework: DEBUG
 baseKeycloakUrl: https://localhost:8443

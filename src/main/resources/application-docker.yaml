@@ -62,3 +62,8 @@ baseKeycloakUrl: ${BASE_KEYCLOAK_URL}
 google:
   clientId: ${GOOGLE_CLIENT_ID}
   clientSecret: ${GOOGLE_CLIENT_SECRET}
+logging:
+  level:
+    com.kooriim: ${KOORIIM_LOG_LEVEL}
+    org:
+      springframework: ${SPRING_LOG_LEVEL}
