@@ -31,21 +31,25 @@ public class GoogleHandler {
 
   public Mono<ServerResponse> syncGooglePhotos(final ServerRequest serverRequest) {
     logger.info("syncing google photos {}", serverRequest.queryParams());
-    final var startDate = serverRequest.queryParam("startDate").get();
-    final var endDate = serverRequest.queryParam("endDate").get();
-    var dateBegin = Instant.ofEpochMilli(Long.valueOf(startDate));
-    var dateEnd = Instant.ofEpochMilli(Long.valueOf(endDate));
+    Instant startDate = null;
+    Instant endDate = null;
+    if (serverRequest.queryParam("startDate").isPresent()) {
+      startDate = Instant.ofEpochMilli(Long.valueOf(serverRequest.queryParam("startDate").get()));
 
+    }
+    if (serverRequest.queryParam("endDate").isPresent()) {
+      endDate = Instant.ofEpochMilli(Long.valueOf(serverRequest.queryParam("endDate").get()));
+    }
     var accesstoken = serverRequest
-      .headers()
-      .header("Authorization")
-      .get(0)
-      .split(" ")[1];
+                        .headers()
+                        .header("Authorization")
+                        .get(0)
+                        .split(" ")[1];
 //    jwtDecoder =  NimbusJwtDecoder.withSecretKey(new SecretKeySpec("gI02EpNeYIiQKWiH1ywGQZl-TSbP7trHez-OdV1OVciXigL3z1vyKWmvjUAR74M4TiNg_mU7h6QHHWjnSu9EdQ".getBytes(), "HS256")).macAlgorithm(MacAlgorithm.HS256).build();
 
     jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
     var jwt = this.jwtDecoder.decode(accesstoken);
-    googleService.syncGooglePhotos(jwt, Map.of("startDate", dateBegin, "endDate", dateEnd)).subscribe();
+    googleService.syncGooglePhotos(jwt, Map.of("startDate", startDate, "endDate", endDate)).subscribe();
 
     return ServerResponse.ok().build();
 
