@@ -34,7 +34,6 @@ public class MediaItemMetaData {
   private float exposureCompensation;
   private String exposureMode;
   private String exposureProgram;
-  private float flash;
   private String lensModel;
   private String meteringMode;
   private String saturation;
@@ -187,14 +186,6 @@ public class MediaItemMetaData {
 
   public void setExposureProgram(String exposureProgram) {
     this.exposureProgram = exposureProgram;
-  }
-
-  public float getFlash() {
-    return flash;
-  }
-
-  public void setFlash(float flash) {
-    this.flash = flash;
   }
 
   public String getLensModel() {

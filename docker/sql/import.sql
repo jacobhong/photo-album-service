@@ -58,7 +58,6 @@ CREATE TABLE  media_item_meta_data (
     exposure_compensation SMALLINT(10) DEFAULT NULL,
     exposure_mode VARCHAR(50) DEFAULT NULL,
     exposure_program VARCHAR(50) DEFAULT NULL,
-    flash SMALLINT(10) DEFAULT NULL,
     lens_model VARCHAR(50) DEFAULT NULL,
     metering_mode VARCHAR(50) DEFAULT NULL,
     saturation VARCHAR(50) DEFAULT NULL,
