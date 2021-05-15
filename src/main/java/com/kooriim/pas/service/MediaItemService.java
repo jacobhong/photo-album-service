@@ -131,6 +131,11 @@ public class MediaItemService {
              .then();
   }
 
+  /**
+   * TODO save originalDate on mediaItem if metadata exists
+   * @param mediaItem
+   * @return
+   */
   public Mono<MediaItem> saveMediaItem(MediaItem mediaItem) {
     return mediaItemRepository.save(mediaItem)
              .doOnNext(m -> {
@@ -152,8 +157,8 @@ public class MediaItemService {
   }
 
   public Mono<MediaItemMetaData> createMetaData(MediaItemMetaData mediaItemMetaData) {
-    return mediaItemMetaDataRepository.save(mediaItemMetaData);
-
+    return mediaItemRepository.updateMediaItemOriginalDate(mediaItemMetaData.getMediaItemId(), mediaItemMetaData.getCreatedDate())
+             .flatMap(result -> mediaItemMetaDataRepository.save(mediaItemMetaData));
   }
 
   protected Mono<MediaItem> processMediaItem(String googleId, FilePart file) {
@@ -268,13 +273,13 @@ public class MediaItemService {
       final var thumbnailSize = compressedThumbnailResult.length / 1024;//kb
       final var videoSize = Long.valueOf(tempFile.length()).intValue() / 1024;//kb
 
-      logger.info("pushing video to s3 {}", file.filename());
+      logger.debug("pushing video to s3 {}", file.filename());
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
                               .key(file.filename())
                               .build(), AsyncRequestBody.fromFile(tempFile)).whenComplete((response, err) -> tempFile.delete());
-      logger.info("pushing thumbnail to s3 {}", file.filename());
+      logger.debug("pushing thumbnail to s3 {}", file.filename());
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
@@ -308,21 +313,21 @@ public class MediaItemService {
       final var compressedSize = compressedImageResult.length / 1024;//kb
       final var thumbnailSize = compressedThumbnailResult.length / 1024;//kb
       final var originalSize = Long.valueOf(tempFile.length()).intValue() / 1024;//kb
-      logger.info("pushing compressed  photo to s3");
+      logger.debug("pushing compressed  photo to s3");
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
                               .key(compressedKey)
                               .build(), AsyncRequestBody.fromBytes(compressedImageResult));
 
-      logger.info("pushing thumbnail  photo to s3");
+      logger.debug("pushing thumbnail  photo to s3");
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
                               .key(thumbnailKey)
                               .build(), AsyncRequestBody.fromBytes(compressedThumbnailResult));
 
-      logger.info("pushing google  photo to s3");
+      logger.debug("pushing google  photo to s3");
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)

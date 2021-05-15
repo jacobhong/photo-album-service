@@ -38,7 +38,7 @@ spring:
         order_inserts: true
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false
 image-directory: /tmp/images
 keycloak:
   realm: kooriim-fe

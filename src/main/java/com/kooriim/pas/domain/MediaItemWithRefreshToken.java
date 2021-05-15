@@ -10,6 +10,7 @@ public class MediaItemWithRefreshToken {
   public MediaItemWithRefreshToken(){}
   public MediaItemWithRefreshToken(MediaItem mediaItem, String refreshToken) {
     this.mediaItem = mediaItem;
+    this.refreshToken = refreshToken;
   }
 
   public MediaItem getMediaItem() {

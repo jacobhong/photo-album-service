@@ -13,6 +13,8 @@ import reactor.core.scheduler.Schedulers;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceContext;
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -43,7 +45,7 @@ public class MediaItemRepository {
                                                 .setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
                                                 .setMaxResults(pageable.getPageSize()).getResultList()))
              .doOnNext(result -> logger.info("Got mediaItems by albumId {}", albumId))
-             .doOnError(error -> logger.error("Error getting mediaItems by albumId {}", ((Throwable)error).getMessage()))
+             .doOnError(error -> logger.error("Error getting mediaItems by albumId {}", ((Throwable) error).getMessage()))
              .subscribeOn(Schedulers.boundedElastic());
   }
 
@@ -54,7 +56,7 @@ public class MediaItemRepository {
                                                 .setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
                                                 .setMaxResults(pageable.getPageSize()).getResultList()))
              .doOnNext(result -> logger.info("Got mediaItems by googleId {}", googleId))
-             .doOnError(error -> logger.error("Error getting mediaItems by googleId {}", ((Throwable)error).getMessage()))
+             .doOnError(error -> logger.error("Error getting mediaItems by googleId {}", ((Throwable) error).getMessage()))
              .subscribeOn(Schedulers.boundedElastic());
   }
 
@@ -81,13 +83,31 @@ public class MediaItemRepository {
              .subscribeOn(Schedulers.boundedElastic());
   }
 
+  public Mono<Integer> updateMediaItemOriginalDate(Integer mediaItemId, LocalDate date) {
+    return Mono.fromCallable(() -> {
+      var em = entityManagerFactory.createEntityManager();
+      var trans = em.getTransaction();
+      trans.begin();
+      final var result = em.createNativeQuery("UPDATE media_item_meta_data SET created_date = :date where media_item_id = :mediaItemId")
+                           .setParameter("mediaItemId", mediaItemId)
+                           .setParameter("date", date)
+                           .executeUpdate();
+      trans.commit();
+      em.close();
+      return result;
+    })
+             .doOnNext(mediaItem -> logger.debug("updated originaldate on mediaItem {}", mediaItem))
+             .doOnError(error -> logger.error("error updating originaldate on mediaItem {} {}", mediaItemId, error.getMessage()))
+             .subscribeOn(Schedulers.boundedElastic());
+  }
+
   public Flux<MediaItem> getMediaItemsByIds(List<Integer> ids) {
     return Flux.defer(() -> Flux.fromIterable(entityManager
                                                 .createNativeQuery("SELECT * FROM media_item WHERE id in (:ids)", MediaItem.class)
                                                 .setParameter("ids", ids)
                                                 .getResultList()))
              .doOnNext(result -> logger.info("Got mediaItem by id {}", ids.toString()))
-             .doOnError(error -> logger.error("Error getting mediaItems by ids {}", ((Throwable)error).getMessage()))
+             .doOnError(error -> logger.error("Error getting mediaItems by ids {}", ((Throwable) error).getMessage()))
              .subscribeOn(Schedulers.boundedElastic());
   }
 

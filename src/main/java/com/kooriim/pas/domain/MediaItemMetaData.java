@@ -6,7 +6,9 @@ import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.SelectBeforeUpdate;
 
 import javax.persistence.*;
-import java.util.Date;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "media_item_meta_data")
@@ -40,7 +42,7 @@ public class MediaItemMetaData {
   private String sceneCaptureType;
   private String sharpness;
   private String whiteBalance;
-  private Date createdDate;
+  private LocalDate createdDate;
 
   public static MediaItemMetaData fromGoogleMetaData(MediaMetadata mediaMetadata) {
     var mediaItemMetaData = new MediaItemMetaData();
@@ -55,6 +57,11 @@ public class MediaItemMetaData {
     if (mediaMetadata.getVideo() != null) {
       mediaItemMetaData.setFps(mediaMetadata.getVideo().getFps());
     }
+
+    mediaItemMetaData.setCreatedDate(LocalDate
+                                       .ofInstant(Instant
+                                                    .ofEpochSecond(mediaMetadata.getCreationTime().getSeconds()),
+                                         ZoneId.of("UTC")));
     mediaItemMetaData.setWidth(mediaMetadata.getWidth());
     mediaItemMetaData.setHeight(mediaMetadata.getHeight());
     return mediaItemMetaData;
@@ -236,11 +243,11 @@ public class MediaItemMetaData {
     this.whiteBalance = whiteBalance;
   }
 
-  public Date getCreatedDate() {
+  public LocalDate getCreatedDate() {
     return createdDate;
   }
 
-  public void setCreatedDate(Date createdDate) {
+  public void setCreatedDate(LocalDate createdDate) {
     this.createdDate = createdDate;
   }
 }

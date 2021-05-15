@@ -299,7 +299,7 @@ public class GoogleService {
       ImageIO.write(image, contentType, outputfile);
       image = null;
       return mediaItem;
-    }).doOnError(error -> logger.error("error downloading image from google {} {}", mediaItem.getFilename(), error))
+    }).doOnError(error -> logger.error("error downloading image from google {} {}", mediaItem.getFilename(), error.getMessage()))
              .doOnNext(x -> logger.debug("downloaded image from google {}", mediaItem.getFilename()));
   }
 
