@@ -119,10 +119,14 @@ public class MediaItemService {
                                            .delete(Delete.builder().objects(deletePhotos).build())
                                            .bucket(S3_BUCKET_NAME)
                                            .build());
-
-               return mediaItemRepository.deleteByMediaItemIds(ids).then();
-             })
-             .then();
+/**
+ *
+ * TODO delete metadata
+ */
+               return mediaItemMetaDataRepository
+                        .deleteMetaDataByMediaItemIds(ids)
+                        .flatMap(x -> mediaItemRepository.deleteByMediaItemIds(ids));
+             }).then();
   }
 
   public Mono<Void> patchMediaItems(List<MediaItem> mediaItems) {
@@ -133,6 +137,7 @@ public class MediaItemService {
 
   /**
    * TODO save originalDate on mediaItem if metadata exists
+   *
    * @param mediaItem
    * @return
    */
@@ -268,7 +273,7 @@ public class MediaItemService {
       final byte[] compressedThumbnailResult = compressPhoto("png", ImageIO.read(tempThumbnailFile), 360f, 270f);
 
       var thumbnailKey = thumbnailPath.substring(thumbnailPath.lastIndexOf("/") + 1);
-      thumbnailKey = thumbnailKey.substring(0, thumbnailKey.lastIndexOf(".")) + ".thumbnail.png";
+      thumbnailKey = "thumbnail." + thumbnailKey.substring(0, thumbnailKey.lastIndexOf(".")) + ".png";
 
       final var thumbnailSize = compressedThumbnailResult.length / 1024;//kb
       final var videoSize = Long.valueOf(tempFile.length()).intValue() / 1024;//kb
@@ -283,7 +288,7 @@ public class MediaItemService {
       awsS3Client.putObject(PutObjectRequest
                               .builder()
                               .bucket(S3_BUCKET_NAME)
-                              .key("thumbnail." + thumbnailKey)
+                              .key(thumbnailKey)
                               .build(), AsyncRequestBody.fromBytes(compressedThumbnailResult)).whenComplete((response, err) -> tempThumbnailFile.delete());
       return MediaItem.newInstanceVideo(file.filename(),
         S3_BUCKET_BASE_URL + thumbnailKey,

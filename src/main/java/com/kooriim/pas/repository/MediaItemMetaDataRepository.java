@@ -1,6 +1,5 @@
 package com.kooriim.pas.repository;
 
-import com.kooriim.pas.domain.MediaItem;
 import com.kooriim.pas.domain.MediaItemMetaData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +11,7 @@ import reactor.core.scheduler.Schedulers;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceContext;
+import java.util.List;
 
 @Repository
 public class MediaItemMetaDataRepository {
@@ -44,6 +44,22 @@ public class MediaItemMetaDataRepository {
                                      .getSingleResult())
              .cast(MediaItemMetaData.class)
              .doOnNext(mediaItemMetaData -> logger.info("Got mediaItemMetaData {}", mediaItemMetaData.getId()))
+             .onErrorResume(e -> Mono.empty())
+             .subscribeOn(Schedulers.boundedElastic());
+  }
+
+  public Mono<Integer> deleteMetaDataByMediaItemIds(List<Integer> ids) {
+    return Mono.fromCallable(() -> {
+      var em = entityManagerFactory.createEntityManager();
+      var trans = em.getTransaction();
+      trans.begin();
+      final var result = em.createNativeQuery("DELETE FROM media_item_meta_data where media_item_id in (:ids)")
+                           .setParameter("ids", ids)
+                           .executeUpdate();
+      trans.commit();
+      em.close();
+      return result;
+    }).doOnNext(result -> logger.info("Deleted mediaItems by ids {}", ids.toString()))
              .onErrorResume(e -> Mono.empty())
              .subscribeOn(Schedulers.boundedElastic());
   }
