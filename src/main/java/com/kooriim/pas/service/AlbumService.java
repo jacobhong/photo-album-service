@@ -95,9 +95,9 @@ public class AlbumService {
   }
 
   public Mono<Void> addPhotosToAlbum(Integer albumId, List<Integer> ids) {
-    return mediaItemRepository.deleteAllMediaItemsByAlbumId(albumId)
-             .doOnNext(result -> ids.forEach(id -> albumRepository.savePhotoAlbum(albumId, id)
-               .subscribe())).then();
+    ids.forEach(id -> albumRepository.savePhotoAlbum(albumId, id)
+               .subscribe());
+    return Mono.empty();
   }
 
   public Mono<Void> deleteAlbum(Integer albumId) {
