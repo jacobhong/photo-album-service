@@ -153,6 +153,22 @@ public class MediaItemRepository {
              .subscribeOn(Schedulers.boundedElastic());
   }
 
+  public Mono<Integer> deleteMediaItemAlbumByIds(Integer albumId, List<Integer> ids) {
+    return Mono.fromCallable(() -> {
+      var em = entityManagerFactory.createEntityManager();
+      var trans = em.getTransaction();
+      trans.begin();
+      final var result = em.createNativeQuery("DELETE FROM media_item_album where album_id = :albumId AND media_item_id in (:ids)")
+                           .setParameter("albumId", albumId)
+                           .setParameter("ids", ids)
+                           .executeUpdate();
+      trans.commit();
+      em.close();
+      return result;
+    }).doOnNext(result -> logger.info("Deleted all mediaItems by albumId {}", albumId))
+             .doOnError(error -> logger.error("Error deleting mediaItems {} ", error.getMessage()))
+             .subscribeOn(Schedulers.boundedElastic());
+  }
 
   public Mono<MediaItem> save(MediaItem mediaItem) {
     return Mono.fromCallable(() -> {

@@ -19,6 +19,7 @@ public class AlbumRouter {
     return nest(path("/photo-album-service"),
       RouterFunctions.route(GET("/albums").and(ACCEPTS_JSON), albumHandler::getAlbums)
         .andRoute(POST("/albums").and(CONTENT_TYPE_JSON), albumHandler::create)
+        .andRoute(PATCH("/albums/{fromAlbumId}/to/{toAlbum}").and(CONTENT_TYPE_JSON), albumHandler::movePhotosToAlbum)
         .andRoute(PATCH("/albums/{id}").and(CONTENT_TYPE_JSON), albumHandler::addPhotosToAlbum)
         .andRoute(DELETE("/albums/{id}").and(ACCEPTS_JSON), albumHandler::delete));
   }

@@ -96,13 +96,21 @@ public class AlbumService {
 
   public Mono<Void> addPhotosToAlbum(Integer albumId, List<Integer> ids) {
     ids.forEach(id -> albumRepository.savePhotoAlbum(albumId, id)
-               .subscribe());
+                        .subscribe());
     return Mono.empty();
+  }
+
+  public Mono<Void> movePhotosToAlbum(Integer fromAlbumId, String toAlbum, List<Integer> ids) {
+    return this.mediaItemRepository.deleteMediaItemAlbumByIds(fromAlbumId, ids)
+             .flatMap(result -> {
+               ids.forEach(id -> albumRepository.savePhotoAlbumByAlbumTitle(toAlbum, id).subscribe());
+               return Mono.empty();
+             }).then();
   }
 
   public Mono<Void> deleteAlbum(Integer albumId) {
     return this.mediaItemRepository.deleteAllMediaItemsByAlbumId(albumId)
-      .flatMap(result -> this.albumRepository.deleteById(albumId).then())
+             .flatMap(result -> this.albumRepository.deleteById(albumId).then())
              .then();
 
   }

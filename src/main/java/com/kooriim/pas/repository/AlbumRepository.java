@@ -58,6 +58,27 @@ public class AlbumRepository {
              .subscribeOn(Schedulers.boundedElastic());
   }
 
+  public Mono<Void> savePhotoAlbumByAlbumTitle(String albumTitle, Integer photoId) {
+    return Mono.fromCallable(() -> {
+      var em = entityManagerFactory.createEntityManager();
+      var trans = em.getTransaction();
+      trans.begin();
+      final var result = em.createNativeQuery("INSERT INTO media_item_album(album_id, media_item_id) VALUES((SELECT id from album where title = :albumTitle) , :photoId)")
+                           .setParameter("albumTitle", albumTitle)
+                           .setParameter("photoId", photoId)
+                           .executeUpdate();
+      trans.commit();
+      em.close();
+      return result;
+    }).doOnNext(result -> logger.info("Moved to media_item_album photoId {} albumTitle {}", photoId, albumTitle))
+             .doOnError(error -> logger.error("Failed to media_item_album photoId {} albumId {} error {}",
+               photoId,
+               albumTitle,
+               error.getMessage()))
+             .then()
+             .subscribeOn(Schedulers.boundedElastic());
+  }
+
   public Flux<Album> findByGoogleId(String googleId, Pageable pageable) {
     return Flux.defer(() -> Flux.fromIterable(entityManager
                                                 .createNativeQuery("SELECT * FROM album where google_id = :googleId", Album.class)

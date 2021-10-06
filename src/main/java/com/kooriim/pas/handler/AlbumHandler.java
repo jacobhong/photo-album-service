@@ -57,5 +57,18 @@ public class AlbumHandler {
              .flatMap(p -> albumService.addPhotosToAlbum(Integer.valueOf(id), p)
                              .flatMap(a -> ServerResponse.ok().build()));
   }
+
+  public Mono<ServerResponse> movePhotosToAlbum(ServerRequest serverRequest) {
+    logger.info("moving photos from album to another album");
+    final var fromAlbumId = serverRequest.pathVariable("fromAlbumId");
+    final var toAlbum = serverRequest.pathVariable("toAlbum");
+    return serverRequest
+             .bodyToMono(new ParameterizedTypeReference<List<String>>() {
+             })
+             .map(p -> p.stream().map(Integer::valueOf)
+                         .collect(Collectors.toList()))
+             .flatMap(p -> albumService.movePhotosToAlbum(Integer.valueOf(fromAlbumId), toAlbum, p)
+                             .flatMap(a -> ServerResponse.ok().build()));
+  }
 //
 }
