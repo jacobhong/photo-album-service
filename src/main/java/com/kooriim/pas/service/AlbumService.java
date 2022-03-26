@@ -79,7 +79,8 @@ public class AlbumService {
 //  }
 
   private Flux<MediaItem> getPhotosByAlbumId(Integer albumId) {
-    return mediaItemRepository.getMediaItemsByAlbumId(albumId, PageRequest.of(0, 4));
+    return mediaItemRepository.getMediaItemsByAlbumId(albumId, PageRequest.of(0, 4))
+             .sort((a, b) -> b.getOriginalDate().compareTo(a.getOriginalDate()));
   }
 
   public Mono<Album> saveOrUpdateAlbum(Album album) {

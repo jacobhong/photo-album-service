@@ -40,7 +40,7 @@ public class MediaItemRepository {
 
   public Flux<MediaItem> getMediaItemsByAlbumId(Integer albumId, Pageable pageable) {
     return Flux.defer(() -> Flux.fromIterable(entityManager
-                                                .createNativeQuery("SELECT * FROM media_item mi INNER JOIN media_item_album mia ON mi.id=mia.media_item_id WHERE mia.album_id=:id", MediaItem.class)
+                                                .createNativeQuery("SELECT * FROM media_item mi INNER JOIN media_item_album mia ON mi.id=mia.media_item_id WHERE mia.album_id=:id order by mi.original_date desc", MediaItem.class)
                                                 .setParameter("id", albumId)
                                                 .setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
                                                 .setMaxResults(pageable.getPageSize()).getResultList()))

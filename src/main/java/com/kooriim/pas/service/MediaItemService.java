@@ -74,7 +74,7 @@ public class MediaItemService {
 
   public Flux<MediaItem> getMediaItems(Map<String, String> params, Pageable pageable) {
     return getUserGoogleId()
-             .flatMapMany(name -> getMediaItems(params, pageable, name));
+             .flatMapMany(name -> getMediaItems(params, pageable, name)).sort((a, b) -> b.getOriginalDate().compareTo(a.getOriginalDate()));
   }
 
   public Mono<MediaItem> createMediaItem(FilePart file) {
