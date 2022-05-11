@@ -9,6 +9,7 @@ import javax.persistence.*;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Objects;
 
 @Entity
 @Table(name = "media_item_meta_data")
@@ -249,5 +250,40 @@ public class MediaItemMetaData {
 
   public void setCreatedDate(LocalDate createdDate) {
     this.createdDate = createdDate;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    MediaItemMetaData that = (MediaItemMetaData) o;
+    return Float.compare(that.focalLength, focalLength) == 0 &&
+             Float.compare(that.apertureFNumber, apertureFNumber) == 0 &&
+             isoEquivalent == that.isoEquivalent &&
+             Float.compare(that.exposureTime, exposureTime) == 0 &&
+             width == that.width &&
+             height == that.height &&
+             Double.compare(that.fps, fps) == 0 &&
+             Float.compare(that.digitalZoomRatio, digitalZoomRatio) == 0 &&
+             Float.compare(that.exposureCompensation, exposureCompensation) == 0 &&
+             Objects.equals(id, that.id) &&
+             Objects.equals(mediaItemId, that.mediaItemId) &&
+             Objects.equals(cameraMake, that.cameraMake) &&
+             Objects.equals(cameraModel, that.cameraModel) &&
+             Objects.equals(contrast, that.contrast) &&
+             Objects.equals(exposureMode, that.exposureMode) &&
+             Objects.equals(exposureProgram, that.exposureProgram) &&
+             Objects.equals(lensModel, that.lensModel) &&
+             Objects.equals(meteringMode, that.meteringMode) &&
+             Objects.equals(saturation, that.saturation) &&
+             Objects.equals(sceneCaptureType, that.sceneCaptureType) &&
+             Objects.equals(sharpness, that.sharpness) &&
+             Objects.equals(whiteBalance, that.whiteBalance) &&
+             Objects.equals(createdDate, that.createdDate);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id, mediaItemId, cameraMake, focalLength, apertureFNumber, cameraModel, isoEquivalent, exposureTime, width, height, fps, contrast, digitalZoomRatio, exposureCompensation, exposureMode, exposureProgram, lensModel, meteringMode, saturation, sceneCaptureType, sharpness, whiteBalance, createdDate);
   }
 }

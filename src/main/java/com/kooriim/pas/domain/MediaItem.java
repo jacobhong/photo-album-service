@@ -10,6 +10,7 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Objects;
 
 @Entity
 @Table(name = "media_item")
@@ -20,6 +21,25 @@ public class MediaItem implements Serializable {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Integer id;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    MediaItem mediaItem = (MediaItem) o;
+    return Objects.equals(id, mediaItem.id) &&
+             Objects.equals(title, mediaItem.title) &&
+             Objects.equals(description, mediaItem.description) &&
+             Objects.equals(googleId, mediaItem.googleId) &&
+             Objects.equals(contentType, mediaItem.contentType) &&
+             Objects.equals(mediaType, mediaItem.mediaType);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id, title, description, googleId, contentType, mediaType);
+  }
+
   @Transient
   private MediaItemMetaData mediaItemMetaData;
   @Size(max = 255)

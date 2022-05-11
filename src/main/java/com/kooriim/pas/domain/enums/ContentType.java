@@ -12,6 +12,7 @@ public enum ContentType {
   AVI("avi"),
   THREE_PG("3pg"),
   MKV("mkv"),
+  WEBP("webp"),
   GIF("gif");
 
   private String value;
