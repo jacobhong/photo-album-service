@@ -40,6 +40,7 @@ public class MediaItemUtil {
               .asBufferedImage();
     var byteOutputStream = new ByteArrayOutputStream();
     ImageIO.setUseCache(false);
+    // handle heic and heif here
     var writers = ImageIO.getImageWritersByFormatName(contentType);
     var writer = writers.next();
     var ios = ImageIO.createImageOutputStream(byteOutputStream);

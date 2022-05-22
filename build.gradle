@@ -21,9 +21,13 @@ allprojects {
 
 repositories {
 	mavenCentral()
+	maven { url 'https://jitpack.io' }
+
 }
 
 dependencies {
+	implementation 'com.github.Cloudmersive:Cloudmersive.APIClient.Java:v3.54'
+
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

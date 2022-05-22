@@ -19,10 +19,10 @@ DROP TABLE IF EXISTS media_item;
 CREATE TABLE  media_item (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    original_image_file_path VARCHAR(255),
-    compressed_image_file_path VARCHAR(255),
-    thumbnail_file_path VARCHAR(255),
-    video_file_path VARCHAR(255),
+    original_image_file_path VARCHAR(500),
+    compressed_image_file_path VARCHAR(500),
+    thumbnail_file_path VARCHAR(500),
+    video_file_path VARCHAR(500),
     content_type VARCHAR(10) NOT NULL,
     media_type VARCHAR(10) NOT NULL,
     description VARCHAR(50) DEFAULT NULL,
@@ -90,5 +90,4 @@ CREATE TABLE  media_item_album (
     FOREIGN KEY (media_item_id) REFERENCES media_item(id),
     FOREIGN KEY (album_id) REFERENCES album(id)
 )  ENGINE=INNODB DEFAULT CHARSET=utf8;
-
 

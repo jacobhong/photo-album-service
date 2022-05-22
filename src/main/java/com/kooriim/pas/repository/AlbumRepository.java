@@ -90,6 +90,16 @@ public class AlbumRepository {
              .subscribeOn(Schedulers.boundedElastic());
   }
 
+  public Flux<Album> findByGoogleId(String googleId) {
+    return Flux.defer(() -> Flux.fromIterable(entityManager
+                                                .createNativeQuery("SELECT * FROM album where google_id = :googleId", Album.class)
+                                                .setParameter("googleId", googleId)
+                                                .getResultList()))
+             .doOnNext(result -> logger.info("Found album by googleId {}", ((Album)result).getId()))
+             .doOnError(error -> logger.error("Failed to save album {}", ((Throwable)error).getMessage()))
+             .subscribeOn(Schedulers.boundedElastic());
+  }
+
   public Mono<Album> getAlbumById(Integer id) {
     return Mono.fromCallable(() -> entityManager.createNativeQuery("SELECT * FROM album where id = :id", Album.class)
                                      .setParameter("id", id)

@@ -62,6 +62,8 @@ baseKeycloakUrl: ${BASE_KEYCLOAK_URL}
 google:
   clientId: ${GOOGLE_CLIENT_ID}
   clientSecret: ${GOOGLE_CLIENT_SECRET}
+cloudmersive:
+  apiKey: ${CLOUDMERSIVE_API_KEY}
 logging:
   level:
     com.kooriim: ${KOORIIM_LOG_LEVEL}

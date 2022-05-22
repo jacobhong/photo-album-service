@@ -1,5 +1,6 @@
 package com.kooriim.pas.service;
 
+import com.cloudmersive.client.ConvertImageApi;
 import com.kooriim.pas.domain.MediaItem;
 import com.kooriim.pas.domain.MediaItemMetaData;
 import com.kooriim.pas.domain.enums.ContentType;
@@ -24,6 +25,8 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
 
 import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +45,9 @@ public class MediaItemService {
 
   @Value("${image-directory}")
   private String IMAGE_DIR;
+
+  @Autowired
+  private ConvertImageApi cloudmersiveApi;
 
   @Autowired
   private MediaItemRepository mediaItemRepository;
@@ -308,7 +314,15 @@ public class MediaItemService {
     return Mono.fromCallable(() -> {
       var tempFile = File.createTempFile(file.filename(), contentType, new File(IMAGE_DIR + "/"));
       file.transferTo(tempFile);
-      var image = ImageIO.read(tempFile);
+      BufferedImage image;
+      // handle heif and heic here
+      if (contentType.equalsIgnoreCase(ContentType.HEIC.toString())) {
+        logger.info("calling cloudmersive to convert heic to jpg for : {}", name);
+        var result = cloudmersiveApi.convertImageImageFormatConvert("heic", "jpg", tempFile);
+        image = ImageIO.read(new ByteArrayInputStream(result));
+      } else {
+        image = ImageIO.read(tempFile);
+      }
       byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
       byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
       final var fileName = file.filename();

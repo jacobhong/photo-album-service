@@ -13,6 +13,8 @@ public enum ContentType {
   THREE_PG("3pg"),
   MKV("mkv"),
   WEBP("webp"),
+  HEIC("heic"),
+  HEIF("heif"),
   GIF("gif");
 
   private String value;
@@ -34,6 +36,7 @@ public enum ContentType {
     }
     String contentType = value;
     if (contentType.equalsIgnoreCase("jpeg")) return ContentType.JPG;
+    if (contentType.equalsIgnoreCase("heif")) throw new IllegalArgumentException("heif not currently supported.");
     return Arrays.stream(values())
              .filter(ct -> ct.value.equalsIgnoreCase(contentType))
              .findFirst()

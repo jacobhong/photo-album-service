@@ -31,6 +31,15 @@ public class AlbumService {
   @Autowired
   private MediaItemService mediaItemService;
 
+  public Flux<Album> getAllAlbums() {
+    return ReactiveSecurityContextHolder
+             .getContext()
+             .map(SecurityContext::getAuthentication)
+             .map(Authentication::getName)
+             .doOnNext(name -> logger.info("getting photos for googleId {}", name))
+             .flatMapMany(name -> albumRepository.findByGoogleId(name));
+  }
+
   public Flux<Album> getAlbums(Pageable pageable) {
     return ReactiveSecurityContextHolder
              .getContext()

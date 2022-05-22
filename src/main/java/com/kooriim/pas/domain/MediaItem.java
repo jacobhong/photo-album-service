@@ -44,13 +44,13 @@ public class MediaItem implements Serializable {
   private MediaItemMetaData mediaItemMetaData;
   @Size(max = 255)
   private String title;
-  @Size(max = 255)
+  @Size(max = 500)
   private String compressedImageFilePath;
-  @Size(max = 255)
+  @Size(max = 500)
   private String originalImageFilePath;
-  @Size(max = 255)
+  @Size(max = 500)
   private String thumbnailFilePath;
-  @Size(max = 255)
+  @Size(max = 500)
   private String videoFilePath;
   @Size(max = 50)
   private String description;
