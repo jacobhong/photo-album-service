@@ -36,7 +36,6 @@ public enum ContentType {
     }
     String contentType = value;
     if (contentType.equalsIgnoreCase("jpeg")) return ContentType.JPG;
-    if (contentType.equalsIgnoreCase("heif")) throw new IllegalArgumentException("heif not currently supported.");
     return Arrays.stream(values())
              .filter(ct -> ct.value.equalsIgnoreCase(contentType))
              .findFirst()

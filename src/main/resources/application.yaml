@@ -60,5 +60,7 @@ logging:
       springframework: DEBUG
 baseKeycloakUrl: http://localhost:8081
 google:
-  clientId: 36443888483-nltubgbdq78spoj2ebvaibem942f0r07.apps.googleusercontent.com
-  clientSecret: BbOZZ21fg5-fH4t1NSoapwjF
+  clientId: ${GOOGLE_CLIENT_ID}
+  clientSecret: ${GOOGLE_CLIENT_SECRET}
+cloudmersive:
+  apiKey: ${CLOUDMERSIVE_API_KEY}

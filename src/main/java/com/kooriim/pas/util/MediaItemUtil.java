@@ -1,6 +1,7 @@
 package com.kooriim.pas.util;
 
 import com.kooriim.pas.domain.MediaItem;
+import com.kooriim.pas.domain.enums.ContentType;
 import net.coobird.thumbnailator.Thumbnails;
 import org.apache.commons.codec.binary.StringUtils;
 
@@ -41,7 +42,7 @@ public class MediaItemUtil {
     var byteOutputStream = new ByteArrayOutputStream();
     ImageIO.setUseCache(false);
     // handle heic and heif here
-    var writers = ImageIO.getImageWritersByFormatName(contentType);
+    var writers = ImageIO.getImageWritersByFormatName(contentType.equalsIgnoreCase(ContentType.HEIC.toString()) ? ContentType.JPG.toString() : contentType);
     var writer = writers.next();
     var ios = ImageIO.createImageOutputStream(byteOutputStream);
     writer.setOutput(ios);

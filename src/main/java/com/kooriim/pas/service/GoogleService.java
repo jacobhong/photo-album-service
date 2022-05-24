@@ -1,5 +1,6 @@
 package com.kooriim.pas.service;
 
+import com.cloudmersive.client.ConvertImageApi;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.api.gax.paging.AbstractPagedListResponse;
 import com.google.auth.oauth2.AccessToken;
@@ -37,6 +38,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URL;
@@ -95,7 +97,8 @@ public class GoogleService {
   @Autowired
   @Qualifier("awsS3Client")
   private S3AsyncClient awsS3Client;
-
+  @Autowired
+  private ConvertImageApi cloudmersiveApi;
   /**
    * Download all MediaItems from google, upload to s3 and save record to database. Need add delay here
    * because google api limits how often we call them
@@ -271,8 +274,8 @@ public class GoogleService {
     if (!googleTempDir.exists()) {
       googleTempDir.mkdirs();
     }
-    if (contentType.equalsIgnoreCase("gif")) {
-      logger.warn("skipping gif {}", mediaItemWithRefreshToken.getMediaItem().getFilename());
+    if (contentType.equalsIgnoreCase("gif") || contentType.equalsIgnoreCase("heif")) {
+      logger.warn("skipping gif and heif formats {}", mediaItemWithRefreshToken.getMediaItem().getFilename());
       return Mono.empty();
     }
     if (mediaType.equalsIgnoreCase("photo")) {
@@ -414,7 +417,14 @@ public class GoogleService {
 
   protected Mono<com.kooriim.pas.domain.MediaItem> pushCompressedGooglePhotoToS3(com.google.photos.types.proto.MediaItem mediaItem, String googleId, File file, String mediaType, String contentType) {
     return Mono.fromCallable(() -> {
-      var image = ImageIO.read(file);
+      BufferedImage image;
+      if (contentType.equalsIgnoreCase(ContentType.HEIC.toString())) {
+        logger.info("calling cloudmersive to convert heic to jpg for : {}", mediaItem.getFilename());
+        var result = cloudmersiveApi.convertImageImageFormatConvert("heic", "jpg", file);
+        image = ImageIO.read(new ByteArrayInputStream(result));
+      } else {
+        image = ImageIO.read(file);
+      }
       byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
       byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
       final var fileName = file.getName();
