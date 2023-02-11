@@ -21,6 +21,7 @@ public class AlbumRouter {
         .andRoute(POST("/albums").and(CONTENT_TYPE_JSON), albumHandler::create)
         .andRoute(PATCH("/albums/{fromAlbumId}/to/{toAlbum}").and(CONTENT_TYPE_JSON), albumHandler::movePhotosToAlbum)
         .andRoute(PATCH("/albums/{id}").and(CONTENT_TYPE_JSON), albumHandler::addPhotosToAlbum)
+        .andRoute(DELETE("/albums/{id}/photos").and(ACCEPTS_JSON), albumHandler::removePhotosFromAlbum)
         .andRoute(DELETE("/albums/{id}").and(ACCEPTS_JSON), albumHandler::delete));
   }
 }

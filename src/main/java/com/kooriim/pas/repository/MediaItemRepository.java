@@ -88,7 +88,7 @@ public class MediaItemRepository {
       var em = entityManagerFactory.createEntityManager();
       var trans = em.getTransaction();
       trans.begin();
-      final var result = em.createNativeQuery("UPDATE media_item_meta_data SET created_date = :date where media_item_id = :mediaItemId")
+      final var result = em.createNativeQuery("UPDATE media_item SET original_date = :date where id = :mediaItemId")
                            .setParameter("mediaItemId", mediaItemId)
                            .setParameter("date", date)
                            .executeUpdate();

@@ -80,5 +80,17 @@ public class AlbumHandler {
              .flatMap(p -> albumService.movePhotosToAlbum(Integer.valueOf(fromAlbumId), toAlbum, p)
                              .flatMap(a -> ServerResponse.ok().build()));
   }
+
+  public Mono<ServerResponse> removePhotosFromAlbum(ServerRequest serverRequest) {
+    logger.info("removing photo to albums");
+    final var id = serverRequest.pathVariable("id");
+    return serverRequest
+             .bodyToMono(new ParameterizedTypeReference<List<String>>() {
+             })
+             .map(p -> p.stream().map(Integer::valueOf)
+                         .collect(Collectors.toList()))
+             .flatMap(p -> albumService.removePhotosFromAlbum(Integer.valueOf(id), p)
+                             .flatMap(a -> ServerResponse.ok().build()));
+  }
 //
 }

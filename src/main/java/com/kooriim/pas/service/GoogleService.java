@@ -274,7 +274,7 @@ public class GoogleService {
     if (!googleTempDir.exists()) {
       googleTempDir.mkdirs();
     }
-    if (contentType.equalsIgnoreCase("gif") || contentType.equalsIgnoreCase("heif")) {
+    if (contentType.equalsIgnoreCase("gif")) {
       logger.warn("skipping gif and heif formats {}", mediaItemWithRefreshToken.getMediaItem().getFilename());
       return Mono.empty();
     }

@@ -118,6 +118,11 @@ public class AlbumService {
              }).then();
   }
 
+  public Mono<Void> removePhotosFromAlbum(Integer fromAlbumId, List<Integer> ids) {
+    this.mediaItemRepository.deleteMediaItemAlbumByIds(fromAlbumId, ids).subscribe();
+    return Mono.empty();
+  }
+
   public Mono<Void> deleteAlbum(Integer albumId) {
     return this.mediaItemRepository.deleteAllMediaItemsByAlbumId(albumId)
              .flatMap(result -> this.albumRepository.deleteById(albumId).then())
