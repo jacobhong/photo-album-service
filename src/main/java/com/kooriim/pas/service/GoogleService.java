@@ -38,12 +38,17 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Date;
 import java.time.Duration;
 import java.time.Instant;
@@ -300,6 +305,35 @@ public class GoogleService {
       BufferedImage image = null;
       image = ImageIO.read(new URL(mediaItem.getBaseUrl() + "=w" + width + "-h" + height));
       File outputfile = new File("/tmp/google_photos/" + mediaItem.getFilename());
+      if (contentType.equalsIgnoreCase("heif")) {
+        logger.info("calling cloudmersive to convert heic to jpg for : {}", mediaItem.getFilename());
+        // File name that is being downloaded
+        // Open connection to the file
+        URL url = new URL(mediaItem.getBaseUrl() + "=w" + width + "-h" + height);
+
+        InputStream is = url.openStream();
+        // Stream to the destionation file
+        FileOutputStream fos = new FileOutputStream("/tmp/google_photos/" + mediaItem.getFilename());
+
+        // Read bytes from URL to the local file
+        byte[] buffer = new byte[4096];
+        int bytesRead = 0;
+
+        while ((bytesRead = is.read(buffer)) != -1) {
+          fos.write(buffer, 0, bytesRead);
+        }
+
+        // Close destination stream
+        fos.close();
+        // Close URL stream
+        is.close();
+        var file = new File("/tmp/google_photos/" + mediaItem.getFilename());
+        var result = cloudmersiveApi.convertImageImageFormatConvert("heic", "jpg", file);
+        image = ImageIO.read(new ByteArrayInputStream(result));
+        Path source = Paths.get("/tmp/google_photos/" + mediaItem.getFilename());
+        Files.move(source, source.resolveSibling(mediaItem.getFilename().replace("HEIC", "jpeg")));
+        outputfile = new File("/tmp/google_photos/" + mediaItem.getFilename().replace("HEIC", "jpeg"));
+      }
       ImageIO.write(image, contentType, outputfile);
       image = null;
       return mediaItem;
@@ -308,7 +342,7 @@ public class GoogleService {
   }
 
   private Mono<MediaItem> getMediaItemVideo(MediaItemWithRefreshToken mediaItemWithRefreshToken) {
-    logger.debug("Downloading image {}", mediaItemWithRefreshToken.getMediaItem().getFilename());
+    logger.debug("Downloading video {}", mediaItemWithRefreshToken.getMediaItem().getFilename());
     var mediaItem = mediaItemWithRefreshToken.getMediaItem();
     return downloadVideo(mediaItem)
              .onErrorResume(retryMediaItemDownload(mediaItemWithRefreshToken, null, mediaItem))
@@ -361,9 +395,12 @@ public class GoogleService {
 
   public Mono<com.kooriim.pas.domain.MediaItem> processGoogleMediaItem(Jwt accessToken, com.google.photos.types.proto.MediaItem mediaItem) {
     logger.debug("uploading mediaItem {}", mediaItem.getFilename());
-    final var file = new File("/tmp/google_photos/" + mediaItem.getFilename());
+    var file = new File("/tmp/google_photos/" + mediaItem.getFilename());
     logger.debug("processing google media item {}", mediaItem.getFilename());
     final var contentType = ContentType.fromString(mediaItem.getFilename()).getValue();
+    if (contentType.equalsIgnoreCase("heic")) {
+      file = new File(file.getPath().replace("HEIC", "jpeg"));
+    }
     final var mediaType = getMediaType(mediaItem.getMimeType());
     if (contentType.equalsIgnoreCase("gif")) {
       logger.warn("skipping gif 2 {}", mediaItem.getFilename());
@@ -417,14 +454,7 @@ public class GoogleService {
 
   protected Mono<com.kooriim.pas.domain.MediaItem> pushCompressedGooglePhotoToS3(com.google.photos.types.proto.MediaItem mediaItem, String googleId, File file, String mediaType, String contentType) {
     return Mono.fromCallable(() -> {
-      BufferedImage image;
-      if (contentType.equalsIgnoreCase(ContentType.HEIC.toString())) {
-        logger.info("calling cloudmersive to convert heic to jpg for : {}", mediaItem.getFilename());
-        var result = cloudmersiveApi.convertImageImageFormatConvert("heic", "jpg", file);
-        image = ImageIO.read(new ByteArrayInputStream(result));
-      } else {
-        image = ImageIO.read(file);
-      }
+      BufferedImage image = ImageIO.read(file);
       byte[] compressedImageResult = compressPhoto(contentType, image, 1920f, 1080f);
       byte[] compressedThumbnailResult = compressPhoto(contentType, image, 360f, 270f);
       final var fileName = file.getName();
@@ -461,7 +491,7 @@ public class GoogleService {
         S3_BUCKET_BASE_URL + compressedKey,
         S3_BUCKET_BASE_URL + originalKey,
         S3_BUCKET_BASE_URL + thumbnailKey,
-        contentType,
+        contentType.equalsIgnoreCase(ContentType.HEIC.toString()) ? ContentType.JPEG.toString()  : contentType,
         googleId,
         mediaType,
         thumbnailSize,

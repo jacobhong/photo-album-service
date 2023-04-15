@@ -18,6 +18,7 @@ public class MediaItemUtil {
   public static String getMediaType(String contentType) {
     return contentType.toLowerCase().endsWith("jpeg") ||
              contentType.toLowerCase().endsWith("jpg") ||
+             contentType.toLowerCase().endsWith("heif") ||
              contentType.toLowerCase().endsWith("png") ? "photo" : "video";
   }
 
