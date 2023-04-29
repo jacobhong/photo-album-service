@@ -155,10 +155,7 @@ public class MediaItemService {
                  mediaItem.getMediaItemMetaData().setMediaItemId(m.getId());
                  mediaItemMetaDataRepository.save(mediaItem.getMediaItemMetaData()).subscribe();
                }
-             }).onErrorResume(error -> {
-               logger.error("resume and ignore error %s", error);
-               return Mono.empty();
-      });
+             });
   }
 
   public Mono<MediaItem> setMetaData(MediaItem mediaItem) {
