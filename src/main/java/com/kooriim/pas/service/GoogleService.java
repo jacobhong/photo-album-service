@@ -331,8 +331,8 @@ public class GoogleService {
         var result = cloudmersiveApi.convertImageImageFormatConvert("heic", "jpg", file);
         image = ImageIO.read(new ByteArrayInputStream(result));
         Path source = Paths.get("/tmp/google_photos/" + mediaItem.getFilename());
-        Files.move(source, source.resolveSibling(mediaItem.getFilename().replace("HEIC", "jpeg")));
-        outputfile = new File("/tmp/google_photos/" + mediaItem.getFilename().replace("HEIC", "jpeg"));
+        Files.move(source, source.resolveSibling(mediaItem.getFilename().replace("HEIC", "jpg")));
+        outputfile = new File("/tmp/google_photos/" + mediaItem.getFilename().replace("HEIC", "jpg"));
       }
       ImageIO.write(image, contentType, outputfile);
       image = null;
@@ -399,7 +399,7 @@ public class GoogleService {
     logger.debug("processing google media item {}", mediaItem.getFilename());
     final var contentType = ContentType.fromString(mediaItem.getFilename()).getValue();
     if (contentType.equalsIgnoreCase("heic")) {
-      file = new File(file.getPath().replace("HEIC", "jpeg"));
+      file = new File(file.getPath().replace("HEIC", "jpg"));
     }
     final var mediaType = getMediaType(mediaItem.getMimeType());
     if (contentType.equalsIgnoreCase("gif")) {
@@ -491,7 +491,7 @@ public class GoogleService {
         S3_BUCKET_BASE_URL + compressedKey,
         S3_BUCKET_BASE_URL + originalKey,
         S3_BUCKET_BASE_URL + thumbnailKey,
-        contentType.equalsIgnoreCase(ContentType.HEIC.toString()) ? ContentType.JPEG.toString()  : contentType,
+        contentType.equalsIgnoreCase(ContentType.HEIC.toString()) ? ContentType.JPG.toString()  : contentType,
         googleId,
         mediaType,
         thumbnailSize,
