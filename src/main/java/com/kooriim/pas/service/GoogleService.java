@@ -228,7 +228,7 @@ public class GoogleService {
       photosLibraryClient.close();
       return Flux.fromIterable(list)
                .flatMap(mediaItemDupeCheck(jwt))
-               .filter(mediaItemWithRefreshToken -> mediaItemWithRefreshToken != null && mediaItemWithRefreshToken.getRefreshToken() != null)
+               .filter(mediaItemWithRefreshToken -> mediaItemWithRefreshToken != null && mediaItemWithRefreshToken instanceof MediaItemWithRefreshToken && mediaItemWithRefreshToken.getRefreshToken() != null)
                .collectList()
                .doOnNext(mediaItemWithRefreshTokens -> logger.info("{} new mediaItems", mediaItemWithRefreshTokens.size()))
                .flatMapIterable(mediaItemWithGoogleToken -> mediaItemWithGoogleToken);
@@ -265,14 +265,12 @@ public class GoogleService {
                .flatMap(exists -> {
                  if (exists.getId() != null) {
                    logger.info("FOUND DUPLICATE || {}", exists.getTitle());
-                   var empty = new MediaItemWithRefreshToken();
-                   empty.setMediaItem(null);
-                   empty.setRefreshToken(null);
-                   return Mono.just(empty);
+                   throw new RuntimeException("found duplicate");
                  } else {
                    return Mono.just(mediaItemWithRefreshToken);
                  }
-               }).doOnError(err -> logger.error("error doing dupe check {}", err.getMessage()));
+               }).doOnError(err -> logger.error("error doing dupe check {}", err.getMessage()))
+               .onErrorResume(error -> Mono.empty());
   }
 
   private Mono<MediaItem> downloadGoogleMediaItem(Jwt accessToken, MediaItemWithRefreshToken mediaItemWithRefreshToken) {
