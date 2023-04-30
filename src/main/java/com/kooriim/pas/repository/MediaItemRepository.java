@@ -75,7 +75,7 @@ public class MediaItemRepository {
   public Mono<MediaItem> mediaItemExists(String googleId, String filename) {
     return Mono.fromCallable(() -> entityManager.createNativeQuery("SELECT * FROM media_item where title = :title and google_id = :googleId", MediaItem.class)
                                      .setParameter("googleId", googleId)
-                                     .setParameter("title", filename)
+                                     .setParameter("title", filename.endsWith("HEIC") ? filename.replace("HEIC", "jpg") : filename)
                                      .getSingleResult())
              .cast(MediaItem.class)
              .doOnNext(mediaItem -> logger.debug("Check if mediaItem exists {} {}", filename, mediaItem))
