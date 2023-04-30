@@ -38,7 +38,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -104,6 +103,7 @@ public class GoogleService {
   private S3AsyncClient awsS3Client;
   @Autowired
   private ConvertImageApi cloudmersiveApi;
+
   /**
    * Download all MediaItems from google, upload to s3 and save record to database. Need add delay here
    * because google api limits how often we call them
@@ -118,7 +118,9 @@ public class GoogleService {
              .delayUntil(d -> Mono.delay(Duration.ofSeconds(1)))
              .flatMap(mediaItem -> downloadGoogleMediaItem(jwt, mediaItem))
              .flatMap(mediaItem -> processGoogleMediaItem(jwt, mediaItem))
-             .flatMap(mediaItemService::saveMediaItem);
+             .flatMap(mediaItem -> mediaItemDupeCheck2(jwt, mediaItem)
+                                     .filter(dupe -> dupe != null && dupe instanceof com.kooriim.pas.domain.MediaItem && dupe.getTitle() != null)
+                                     .flatMap(mediaItemService::saveMediaItem));
   }
 
   public Mono<GoogleTokenResponse> getGoogleAccessToken(Jwt accessToken) {
@@ -270,6 +272,20 @@ public class GoogleService {
                  return Mono.just(mediaItemWithRefreshToken);
                }).doOnError(err -> logger.error("error doing dupe check {}", err.getMessage()));
   }
+
+  private Mono<com.kooriim.pas.domain.MediaItem> mediaItemDupeCheck2(Jwt jwt, com.kooriim.pas.domain.MediaItem mediaItem) {
+    return mediaItemRepository.mediaItemExists(jwt.getClaimAsString("sub"), mediaItem
+                                                                              .getTitle())
+             .flatMap(exists -> {
+               if (exists.getId() != null && exists.getTitle() != null) {
+                 logger.info("FOUND DUPLICATE2 || {}", exists.getTitle());
+                 throw new RuntimeException("dupe exist 2");
+               }
+               return Mono.just(mediaItem);
+             }).doOnError(err -> logger.error("error doing dupe check {}", err.getMessage()))
+             .onErrorResume(error -> Mono.empty());
+  }
+
 
   private Mono<MediaItem> downloadGoogleMediaItem(Jwt accessToken, MediaItemWithRefreshToken mediaItemWithRefreshToken) {
     var mediaItem = mediaItemWithRefreshToken.getMediaItem();
@@ -491,7 +507,7 @@ public class GoogleService {
         S3_BUCKET_BASE_URL + compressedKey,
         S3_BUCKET_BASE_URL + originalKey,
         S3_BUCKET_BASE_URL + thumbnailKey,
-        contentType.equalsIgnoreCase(ContentType.HEIC.toString()) ? ContentType.JPG.toString()  : contentType,
+        contentType.equalsIgnoreCase(ContentType.HEIC.toString()) ? ContentType.JPG.toString() : contentType,
         googleId,
         mediaType,
         thumbnailSize,
